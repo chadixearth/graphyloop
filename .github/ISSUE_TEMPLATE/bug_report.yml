@@ -1,0 +1,71 @@
+name: Bug report
+description: Something installed, connected, or behaved wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: run `npx graphyloop doctor` and `npx graphyloop status` —
+        their output answers most of what is asked below.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, what you got. Paste the exact error.
+      placeholder: |
+        Ran: npx graphyloop install
+        Expected: Claude Code shows graphyloop connected
+        Got: <paste the error>
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `npx graphyloop doctor`
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: graphyloop version
+      description: "`npx graphyloop --version`, or the version installed in ~/.graphyloop"
+      placeholder: "0.1.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: harness
+    attributes:
+      label: Harness
+      multiple: true
+      options:
+        - OpenCode
+        - Claude Code
+        - Codex
+        - Cursor / Windsurf
+        - Other MCP client
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: OS and Node version
+      description: "`node --version` plus your OS"
+      placeholder: "Windows 11, Node 22.11.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: state
+    attributes:
+      label: Swarm state (optional)
+      description: >
+        Output of `npx graphyloop status --json`. It reports the active state
+        file path, which is often the answer. Redact anything private —
+        memory contents can include project details.
+      render: json

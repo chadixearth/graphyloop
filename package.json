@@ -57,6 +57,7 @@
     "workflow",
     "config",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ]
 }

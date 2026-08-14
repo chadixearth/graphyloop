@@ -73,7 +73,7 @@ Steps:
    - If npx asks "Ok to proceed?", answer yes. If npx is missing, stop and tell the user to install Node.js 20+ (npx ships with npm).
 3. Verify — every applicable check must pass:
    - `npx --yes graphyloop doctor` prints the harness table.
-   - Core engine files exist: ~/.graphyloop/graphyloop/cli.mjs , ~/.graphyloop/mcp-server.mjs , ~/.graphyloop/lib/mcp.mjs .
+   - Core engine files exist: ~/.graphyloop/graphyloop/cli.mjs , ~/.graphyloop/mcp-server.mjs , ~/.graphyloop/lib/mcp.mjs , ~/.graphyloop/lib/engine.mjs .
    - OpenCode (if present): ~/.config/opencode/opencode.json contains a plugin entry "./plugins/graphyloop/plugin.js", and ~/.config/opencode/agents/ contains 25 .md files.
    - Claude Code (if present): ~/.claude.json has an mcpServers.graphyloop entry, and ~/.claude/agents/ is populated.
    - Codex (if present): ~/.codex/config.toml contains a [mcp_servers.graphyloop] section.
@@ -160,8 +160,11 @@ Once installed, any MCP-capable harness can call:
 | `task_record` | Record a task result (updates agent metrics) |
 | `swarm_state` | Swarm status + memory count |
 | `memory_store` | Persist a memory entry — `decision`, `pattern`, `lesson`, `event`, `task` |
-| `memory_search` | Keyword-search stored memories |
+| `memory_search` | Keyword-search stored memories — ranked by match quality with a recency bias, optional `type` filter |
+| `memory_forget` | Delete one memory by id, so a wrong lesson can be corrected instead of recalled forever |
 | `shutdown` | Gracefully stop the swarm |
+
+Tools run **in-process**: the server calls the engine directly instead of spawning a child process per call, which measured **3.8 ms per tool call against 73.7 ms** for the old spawn path, and stops one slow call from blocking the rest.
 
 The swarm **initializes itself on the first tool call** — no setup step, no init tool to remember. Memory persists across `shutdown` and across sessions; only the agent roster is reset.
 
@@ -293,11 +296,11 @@ Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and t
 ## Development
 
 ```bash
-npm test          # 44 tests: MCP protocol E2E + engine state durability/concurrency + OpenCode plugin + installer preservation/idempotency + uninstall round-trip
+npm test          # 48 tests: MCP protocol E2E (in-process + spawned) + engine state durability/concurrency + OpenCode plugin + installer preservation/idempotency + uninstall round-trip
 npm pack          # build the publishable tarball
 ```
 
-**Structure:** `bin/` CLI entry · `lib/` installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/cli.mjs` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files · `scripts/` test runner + CI smoke · `assets/` logo + diagrams (SVG, light/dark pairs; referenced by absolute URL so npm renders them too, and kept out of the tarball).
+**Structure:** `bin/` CLI entry · `lib/` engine + installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/cli.mjs` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files · `scripts/` test runner + CI smoke · `assets/` logo + diagrams (SVG, light/dark pairs; referenced by absolute URL so npm renders them too, and kept out of the tarball).
 
 `adapter/*.ts` is the original TypeScript design reference — nothing imports it and no build step compiles it, so it is neither published nor installed (CI fails the build if a `.ts` file reaches the tarball).
 
@@ -321,7 +324,7 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 | Version | Highlights |
 |---|---|
-| **0.1.3** *(unreleased)* | Fix: the task queue grew without bound — settled tasks are now capped (`GRAPHYLOOP_MAX_TASKS`, default 500) while pending work is never dropped · npm metadata (repository, issues, homepage, keywords, author) so the package links back and is findable · octopus mark + drawn 5-gate workflow diagram |
+| **0.1.3** *(unreleased)* | **MCP tools now run in-process** — the engine moved to `lib/engine.mjs` and is called directly instead of spawning a child process per tool call: **3.8 ms vs 73.7 ms** per call, and a slow call no longer blocks the server · **`memory_forget`** so a wrong memory can be corrected rather than recalled forever · memory search gains recency ranking and a `type` filter · Fix: the task queue grew without bound — settled tasks are capped (`GRAPHYLOOP_MAX_TASKS`, default 500), pending work never dropped · `initialize` echoes the client's protocol version instead of always asserting ours · npm metadata (repository, issues, homepage, keywords, author) · octopus mark + drawn 5-gate workflow diagram · CHANGELOG and contributor docs · 48 tests |
 | **0.1.2** | **Fix: MCP tools worked only after a manual init** — the swarm now initializes lazily on the first tool call, so Claude Code / Codex / Cursor work in a fresh project out of the box · **Fix: re-init after `shutdown` erased the whole memory log** · **Fix: parallel agents silently dropped each other's writes** — state is now lock-guarded (measured: 6 of 12 concurrent writes lost before, 12 of 12 kept after) · state moved to `<project>/.graphyloop/` with automatic migration from `.opencode/graphyloop/` · project-root guard extended to the MCP server · crash-safe atomic writes, corrupt-state quarantine, capped memory log · engine input validation (`--flag=value`, unknown agent types, duplicate ids, malformed task payloads, empty queries) · plugin surfaces CLI crashes/timeouts instead of swallowing them · uninstall no longer skips `AGENTS.md` when `opencode.json` is unparsable · `adapter/*.ts` (1.3k unrunnable lines) no longer published or installed · release gate rejects a tag that disagrees with `package.json` · first test coverage for the OpenCode plugin · 25 new tests (44 total) |
 | **0.1.1** | Complete rebrand to the GraphyLoop identity (engine, agents, tool names, config entries) · `graphcrew` agent squad · automatic npm releases via GitHub Actions (tag → test → publish) · copy-paste setup prompt for any AI harness · professional docs, CI matrix (Win/macOS/Linux × Node 20/22/24), AI co-author credits |
 | **0.1.0** | Initial release — one-command install for OpenCode, Claude Code, Codex, Cursor · 24-agent squad · 5-gate workflow · MCP server (8 tools) · persistent memory + swarm engine · zero runtime dependencies |

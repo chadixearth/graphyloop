@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest a capability, agent, or harness
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that graphyloop makes hard or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+      description: Rough shape is fine — a tool name, a flag, a workflow change.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints this has to live with
+      description: These are non-negotiable for the project; tick the ones you have considered.
+      options:
+        - label: Works with zero runtime dependencies (Node ≥ 20 only)
+        - label: Never overwrites a user's existing config
+        - label: Behaves the same on Windows, macOS and Linux

@@ -298,6 +298,7 @@ test('installed MCP server runs from ~/.graphyloop (self-contained artifact)', a
   const installedMcp = join(sandbox, '.graphyloop', 'mcp-server.mjs')
   assert.ok(existsSync(installedMcp), 'mcp-server.mjs installed')
   assert.ok(existsSync(join(sandbox, '.graphyloop', 'lib', 'mcp.mjs')), 'lib/mcp.mjs installed alongside')
+  assert.ok(existsSync(join(sandbox, '.graphyloop', 'lib', 'engine.mjs')), 'lib/engine.mjs installed alongside')
 
   const projectDir = mkdtempSync(join(tmpdir(), 'graphyloop-inst-mcp-proj-'))
   const s = spawn(process.execPath, [installedMcp], {
@@ -316,7 +317,7 @@ test('installed MCP server runs from ~/.graphyloop (self-contained artifact)', a
   const lines = out.trim().split('\n')
   assert.equal(lines.length, 2, `installed server responded to both requests: ${out}`)
   assert.equal(JSON.parse(lines[0]).result.serverInfo.name, 'graphyloop-mcp')
-  assert.equal(JSON.parse(lines[1]).result.tools.length, 8, 'installed server lists 8 tools')
+  assert.equal(JSON.parse(lines[1]).result.tools.length, 9, 'installed server lists 9 tools')
   s.stdin.end()
   await exit
   rmSync(projectDir, { recursive: true, force: true })
@@ -368,6 +369,7 @@ test('uninstall removes only graphyloop additions, keeps user config, exit 0', (
   assert.ok(!existsSync(join(sandbox, '.graphyloop', 'graphyloop', 'cli.mjs')), 'core cli removed')
   assert.ok(!existsSync(join(sandbox, '.graphyloop', 'mcp-server.mjs')), 'mcp server removed')
   assert.ok(!existsSync(join(sandbox, '.graphyloop', 'lib', 'mcp.mjs')), 'lib/mcp.mjs removed')
+  assert.ok(!existsSync(join(sandbox, '.graphyloop', 'lib', 'engine.mjs')), 'lib/engine.mjs removed')
 
   // user agents (seeded, content differs) survive
   assert.ok(existsSync(join(sandbox, '.claude', 'agents', 'my-custom-agent.md')), 'user claude agent preserved')
