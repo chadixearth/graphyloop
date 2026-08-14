@@ -25,7 +25,7 @@
     "lib",
     "templates",
     "mcp-server.mjs",
-    "adapter",
+    "adapter/cli.mjs",
     "plugin",
     "agents",
     "workflow",

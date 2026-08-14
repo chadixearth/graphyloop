@@ -96,7 +96,7 @@ Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a re
 
 | Capability | Description |
 |---|---|
-| 🐝 **Swarm orchestration** | Spawn, distribute, and track agents with a hierarchical swarm topology — zero API keys, state in `<project>/.opencode/graphyloop/state.json` |
+| 🐝 **Swarm orchestration** | Spawn, distribute, and track agents with a hierarchical swarm topology — zero API keys, state in `<project>/.graphyloop/state.json` |
 | 🧠 **Persistent memory** | Store decisions, patterns, lessons, and events; keyword-search across sessions. Survives restarts and compactions |
 | 🤖 **24-agent squad** | Specialized agents for exploration, backend, frontend, testing, security, review, refactoring, docs, data, performance, and more (see [Squad](#squad-agents)) |
 | 🛡️ **5-gate delivery workflow** | Classify → Discover → Implement → Verify → Report, with lane-based verification and evidence-first reporting |
@@ -158,7 +158,9 @@ Once installed, any MCP-capable harness can call:
 | `memory_search` | Keyword-search stored memories |
 | `shutdown` | Gracefully stop the swarm |
 
-The swarm **initializes itself on the first tool call** — no setup step, no init tool to remember. Memory persists across `shutdown` and across sessions; only the agent roster is reset. State is written to `<project>/.opencode/graphyloop/state.json`, and the engine refuses to run in a home, system, or harness-config directory so it never litters those trees.
+The swarm **initializes itself on the first tool call** — no setup step, no init tool to remember. Memory persists across `shutdown` and across sessions; only the agent roster is reset.
+
+State lives in `<project>/.graphyloop/state.json` (pre-0.1.2 state under `.opencode/graphyloop/` is moved there automatically on first use). Writes are atomic and guarded by a lock, so parallel agents cannot drop each other's updates; the engine refuses to run in a home, system, or harness-config directory so it never litters those trees.
 
 Verify the connection any time:
 
@@ -233,7 +235,9 @@ npx graphyloop mcp                 # run the MCP server directly (stdio)
 model: <your-model>
 ```
 
-**DeepSeek direct mode** — optional: set `DEEPSEEK_API_KEY` to let the graphyloop engine call DeepSeek directly (bypasses the harness). Not required for anything.
+**DeepSeek direct mode** — optional: set `DEEPSEEK_API_KEY` to let the graphyloop engine call DeepSeek directly (bypasses the harness). Model comes from `--model` or `DEEPSEEK_MODEL`; `deepseek-v4-flash` (default) and `deepseek-v4-pro` are the current ids. Not required for anything.
+
+**Engine limits** — `GRAPHYLOOP_MAX_MEMORIES` caps the memory log (default 2000, oldest dropped first). `GRAPHYLOOP_LOCK_TIMEOUT_MS` is how long a command waits for the state lock (default 10000).
 
 **Default agent (OpenCode)** — setup sets `default_agent: agent-chadi` only when you don't have one. Change it any time.
 
@@ -270,17 +274,22 @@ Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and t
 | Re-running setup "skips" files | Normal — that is the preserve-your-config behavior. Use `--force` to refresh (backups are made first) |
 | Config merge warnings about `opencode.jsonc` | OpenCode gives `.jsonc` precedence; review it for the plugin/commands keys |
 | I edited an agent and uninstall kept it | Intended — uninstall only removes byte-identical copies |
+| `timed out ... waiting for the graphyloop state lock` | Another graphyloop command is mid-write. A lock orphaned by a killed process clears itself after 30s; raise `GRAPHYLOOP_LOCK_TIMEOUT_MS` if your swarm is very wide |
+| My swarm history "disappeared" after updating | It moved: `.opencode/graphyloop/state.json` → `.graphyloop/state.json`, migrated on first use. `npx graphyloop status` prints the active `stateFile` path |
+| `state.json.corrupt-<timestamp>` appeared | The engine found an unparsable state file, kept it for inspection, and started clean rather than failing every command |
 
 ---
 
 ## Development
 
 ```bash
-npm test          # 34 tests: MCP protocol E2E + engine state durability + installer preservation/idempotency + uninstall round-trip
+npm test          # 38 tests: MCP protocol E2E + engine state durability/concurrency + installer preservation/idempotency + uninstall round-trip
 npm pack          # build the publishable tarball
 ```
 
-**Structure:** `bin/` CLI entry · `lib/` installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files · `scripts/` test runner + CI smoke.
+**Structure:** `bin/` CLI entry · `lib/` installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/cli.mjs` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files · `scripts/` test runner + CI smoke.
+
+`adapter/*.ts` is the original TypeScript design reference — nothing imports it and no build step compiles it, so it is neither published nor installed (CI fails the build if a `.ts` file reaches the tarball).
 
 **CI** runs the full matrix (Windows/macOS/Linux × Node 20/22/24) on every push: syntax, tests, fresh-sandbox installer smoke, installed-MCP-server handshake, tarball contents.
 
@@ -302,7 +311,7 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 | Version | Highlights |
 |---|---|
-| **0.1.2** | **Fix: MCP tools worked only after a manual init** — the swarm now initializes lazily on the first tool call, so Claude Code / Codex / Cursor work in a fresh project out of the box · **Fix: re-init after `shutdown` erased the whole memory log** · project-root guard extended to the MCP server (no more writes into home/system dirs) · crash-safe atomic state writes, corrupt-state recovery, capped memory log · engine input validation (`--flag=value`, unknown agent types, duplicate ids, empty queries) · plugin surfaces CLI crashes/timeouts instead of swallowing them · 15 new tests (34 total) |
+| **0.1.2** | **Fix: MCP tools worked only after a manual init** — the swarm now initializes lazily on the first tool call, so Claude Code / Codex / Cursor work in a fresh project out of the box · **Fix: re-init after `shutdown` erased the whole memory log** · **Fix: parallel agents silently dropped each other's writes** — state is now lock-guarded (measured: 6 of 12 concurrent writes lost before, 12 of 12 kept after) · state moved to `<project>/.graphyloop/` with automatic migration from `.opencode/graphyloop/` · project-root guard extended to the MCP server · crash-safe atomic writes, corrupt-state quarantine, capped memory log · engine input validation (`--flag=value`, unknown agent types, duplicate ids, malformed task payloads, empty queries) · plugin surfaces CLI crashes/timeouts instead of swallowing them · uninstall no longer skips `AGENTS.md` when `opencode.json` is unparsable · `adapter/*.ts` (1.3k unrunnable lines) no longer published or installed · release gate rejects a tag that disagrees with `package.json` · 19 new tests (38 total) |
 | **0.1.1** | Complete rebrand to the GraphyLoop identity (engine, agents, tool names, config entries) · `graphcrew` agent squad · automatic npm releases via GitHub Actions (tag → test → publish) · copy-paste setup prompt for any AI harness · professional docs, CI matrix (Win/macOS/Linux × Node 20/22/24), AI co-author credits |
 | **0.1.0** | Initial release — one-command install for OpenCode, Claude Code, Codex, Cursor · 24-agent squad · 5-gate workflow · MCP server (8 tools) · persistent memory + swarm engine · zero runtime dependencies |
 

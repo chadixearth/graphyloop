@@ -1,28 +1,10 @@
 {
-  "name": "@opencode/graphyloop-adapter",
-  "version": "1.0.0",
-  "description": "GraphyLoop meta-harness adapter for OpenCode + DeepSeek — swarm coordination, hybrid memory, neural routing",
+  "name": "@graphyloop/adapter",
+  "private": true,
+  "version": "0.1.2",
+  "description": "GraphyLoop engine. cli.mjs is the runtime shipped to ~/.graphyloop/graphyloop; the *.ts files are the original design reference — nothing imports them and no build step compiles them, so they are not published or installed.",
   "type": "module",
   "main": "cli.mjs",
-  "files": [
-    "cli.mjs",
-    "index.ts",
-    "swarm.ts",
-    "memory.ts",
-    "deepseek-provider.ts",
-    "path-mapper.ts",
-    "types.ts",
-    "generate-config.ts"
-  ],
-  "scripts": {
-    "init": "npx tsx generate-config.ts",
-    "test": "echo 'Tests: see README'",
-    "check": "npx tsc --noEmit"
-  },
-  "dependencies": {},
-  "devDependencies": {
-    "typescript": "^5.0.0"
-  },
   "engines": {
     "node": ">=20.0.0"
   },

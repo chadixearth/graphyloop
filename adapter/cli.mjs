@@ -2,22 +2,26 @@
 /**
  * GraphyLoop CLI — bash-callable entry for agent-chadi
  * 
- * Each call loads/saves state from .opencode/graphyloop/state.json
+ * Each call loads/saves state from <project>/.graphyloop/state.json
  * so swarm and memory survive across shell invocations.
  * 
  * Commands (all return JSON):
  *   init | status | spawn | distribute | record | memory-store | memory-search | shutdown | cleanup
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, renameSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, renameSync, rmdirSync, statSync } from 'fs'
 import { resolve, dirname } from 'path'
 
 // ============================================================================
 // State persistence
 // ============================================================================
 
-const CONFIG_DIR = '.opencode/graphyloop'
+const CONFIG_DIR = '.graphyloop'
 const STATE_FILE = `${CONFIG_DIR}/state.json`
+// Pre-0.1.2 location. graphyloop drives four harnesses, so parking state under
+// a `.opencode` directory was wrong for three of them; existing files are
+// migrated on first load.
+const LEGACY_STATE_FILE = '.opencode/graphyloop/state.json'
 const PROJECT_ROOT = process.env.GRAPHYLOOP_PROJECT_ROOT || process.cwd()
 
 // Memories are append-only and every command rewrites the whole state file, so
@@ -70,7 +74,29 @@ function stamp() {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
 }
 
+// Move a pre-0.1.2 state file to the new location. Renaming rather than copying
+// avoids a split brain where the two files drift apart.
+function migrateLegacyState() {
+  const target = resolve(PROJECT_ROOT, STATE_FILE)
+  const legacy = resolve(PROJECT_ROOT, LEGACY_STATE_FILE)
+  if (existsSync(target) || !existsSync(legacy)) return false
+  mkdirSync(dirname(target), { recursive: true })
+  try {
+    renameSync(legacy, target)
+  } catch {
+    // Rename can fail across mount boundaries; fall back to copy + unlink.
+    try {
+      writeFileSync(target, readFileSync(legacy))
+      unlinkSync(legacy)
+    } catch {
+      return false
+    }
+  }
+  return true
+}
+
 function loadState() {
+  migrateLegacyState()
   const path = resolve(PROJECT_ROOT, STATE_FILE)
   if (!existsSync(path)) return freshState()
   try {
@@ -98,6 +124,50 @@ function saveState(s) {
   const tmp = `${path}.tmp-${process.pid}`
   writeFileSync(tmp, JSON.stringify(s, null, 2))
   renameSync(tmp, path)
+}
+
+// ============================================================================
+// Write lock
+//
+// A swarm runs agents in parallel and every command is load → mutate → save, so
+// two concurrent writers would silently drop one of the two updates. mkdir is
+// atomic on every platform, which makes it a dependency-free mutex.
+// ============================================================================
+
+const LOCK_DIR = `${STATE_FILE}.lock`
+const LOCK_TIMEOUT_MS = Math.max(100, Number(process.env.GRAPHYLOOP_LOCK_TIMEOUT_MS) || 10000)
+const LOCK_STALE_MS = 30000
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+}
+
+function acquireLock() {
+  const lock = resolve(PROJECT_ROOT, LOCK_DIR)
+  mkdirSync(dirname(lock), { recursive: true })
+  const deadline = Date.now() + LOCK_TIMEOUT_MS
+  for (;;) {
+    try {
+      mkdirSync(lock)
+      return lock
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e
+      // Break a lock orphaned by a killed process.
+      try {
+        if (Date.now() - statSync(lock).mtimeMs > LOCK_STALE_MS) {
+          rmdirSync(lock)
+          continue
+        }
+      } catch { continue /* vanished between stat and rmdir — retry */ }
+      if (Date.now() >= deadline) return null
+      sleepSync(20)
+    }
+  }
+}
+
+function releaseLock(lock) {
+  if (!lock) return
+  try { rmdirSync(lock) } catch { /* already gone */ }
 }
 
 function output(obj) { console.log(JSON.stringify(obj)) }
@@ -139,9 +209,10 @@ function cmdInit() {
 
 function cmdStatus() {
   const s = loadState()
-  if (!s.initialized) { output({ initialized: false }); return }
+  const stateFile = resolve(PROJECT_ROOT, STATE_FILE)
+  if (!s.initialized) { output({ initialized: false, stateFile }); return }
   output({
-    initialized: true, topology: s.topology,
+    initialized: true, topology: s.topology, stateFile,
     agents: s.agents.length,
     activeAgents: s.agents.filter(a => a.status === 'active').length,
     tasksCompleted: s.tasksCompleted, tasksFailed: s.tasksFailed,
@@ -324,9 +395,13 @@ function cmdShutdown() {
 }
 
 function cmdCleanup() {
-  const path = resolve(PROJECT_ROOT, STATE_FILE)
-  try { unlinkSync(path) } catch { /* ignore */ }
-  output({ ok: true, message: 'state file removed' })
+  const removed = []
+  for (const rel of [STATE_FILE, LEGACY_STATE_FILE]) {
+    const path = resolve(PROJECT_ROOT, rel)
+    if (!existsSync(path)) continue
+    try { unlinkSync(path); removed.push(rel) } catch { /* ignore */ }
+  }
+  output({ ok: true, message: 'state file removed', removed })
 }
 
 /**
@@ -398,7 +473,11 @@ function getArg(name) {
   return ''
 }
 
-try {
+// Commands that read-modify-write the state file. Readers need no lock: writes
+// land via an atomic rename, so a reader always sees one complete state.
+const MUTATING_COMMANDS = new Set(['init', 'spawn', 'distribute', 'record', 'memory-store', 'shutdown', 'cleanup'])
+
+function dispatch() {
   switch (command) {
     case 'init':      cmdInit(); break
     case 'status':    cmdStatus(); break
@@ -420,21 +499,37 @@ try {
     case 'shutdown':  cmdShutdown(); break
     case 'cleanup':   cmdCleanup(); break
     case 'ask':       cmdAsk(getArg('prompt'), getArg('type'), getArg('model')); break
-    default:
+    default: {
+      const cli = 'node ~/.graphyloop/graphyloop/cli.mjs'
       output({
         error: 'unknown command',
         usage: {
-          init: 'node .opencode/graphyloop/cli.mjs init',
-          status: 'node .opencode/graphyloop/cli.mjs status',
-          spawn: 'node .opencode/graphyloop/cli.mjs spawn --type coder --id my-agent',
-          distribute: 'node .opencode/graphyloop/cli.mjs distribute --tasks \'[json]\'',
-          record: 'node .opencode/graphyloop/cli.mjs record --taskId t1 --status completed',
-          ask: 'node .opencode/graphyloop/cli.mjs ask --prompt "summarize" --type coder --model deepseek-v4-flash',
-          'memory-store': 'node .opencode/graphyloop/cli.mjs memory-store --agent sys --content "text" --type event',
-          'memory-search': 'node .opencode/graphyloop/cli.mjs memory-search --query "text" --limit 10',
-          shutdown: 'node .opencode/graphyloop/cli.mjs shutdown',
-        }
+          init: `${cli} init`,
+          status: `${cli} status`,
+          spawn: `${cli} spawn --type coder --id my-agent`,
+          distribute: `${cli} distribute --tasks '[json]'`,
+          record: `${cli} record --taskId t1 --status completed`,
+          ask: `${cli} ask --prompt "summarize" --type coder --model deepseek-v4-flash|deepseek-v4-pro`,
+          'memory-store': `${cli} memory-store --agent sys --content "text" --type event`,
+          'memory-search': `${cli} memory-search --query "text" --limit 10`,
+          shutdown: `${cli} shutdown`,
+        },
+        agentTypes: AGENT_TYPES,
       })
+    }
+  }
+}
+
+try {
+  if (!MUTATING_COMMANDS.has(command)) {
+    dispatch()
+  } else {
+    const lock = acquireLock()
+    if (!lock) {
+      output({ error: `timed out after ${LOCK_TIMEOUT_MS}ms waiting for the graphyloop state lock (${LOCK_DIR}); a stale lock is cleared automatically after ${LOCK_STALE_MS}ms` })
+    } else {
+      try { dispatch() } finally { releaseLock(lock) }
+    }
   }
 } catch (e) {
   output({ error: e instanceof Error ? e.message : String(e) })

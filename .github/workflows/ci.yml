@@ -56,4 +56,9 @@ jobs:
           grep -q 'package/lib/mcp.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/mcp-server.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/plugin/graphyloop/plugin.js' /tmp/graphyloop-files.txt
+          grep -q 'package/adapter/cli.mjs' /tmp/graphyloop-files.txt
+          # adapter/*.ts is an unrunnable design reference — it must never ship.
+          if grep -q '\.ts$' /tmp/graphyloop-files.txt; then
+            echo "TARBALL_HAS_TS:"; grep '\.ts$' /tmp/graphyloop-files.txt; exit 1
+          fi
           echo "TARBALL_OK"
