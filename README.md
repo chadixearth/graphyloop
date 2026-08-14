@@ -270,6 +270,8 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 | Package | [npmjs.com/package/graphyloop](https://www.npmjs.com/package/graphyloop) |
 | Install | `npx graphyloop install` |
 
+## Credits
+
 ## License
 
 MIT © 2026 chadixearth
