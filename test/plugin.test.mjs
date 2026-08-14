@@ -81,6 +81,7 @@ test('exposes the graphyloop_* tool set', async () => {
   assert.deepEqual(names, [
     'graphyloop_distribute',
     'graphyloop_init',
+    'graphyloop_memory_forget',
     'graphyloop_memory_search',
     'graphyloop_memory_store',
     'graphyloop_record',
@@ -122,6 +123,23 @@ test('shutdown drops the cached init so the swarm restarts', async () => {
 
   const after = parse(await api.tool.graphyloop_memory_store.execute({ content: 'after shutdown' }))
   assert.equal(after.store.ok, true, `store after shutdown should re-init: ${JSON.stringify(after)}`)
+})
+
+test('a memory can be corrected, not just appended', async () => {
+  const api = await makePlugin({ directory: project })
+  await api.tool.graphyloop_memory_store.execute({ content: 'wrong lesson to retract', type: 'lesson' })
+  const found = parse(await api.tool.graphyloop_memory_search.execute({ query: 'retract', type: 'lesson' }))
+  const hit = found.search.results.find((m) => m.content === 'wrong lesson to retract')
+  assert.ok(hit, JSON.stringify(found.search))
+
+  const forgotten = parse(await api.tool.graphyloop_memory_forget.execute({ id: hit.id }))
+  assert.equal(forgotten.forget.ok, true, JSON.stringify(forgotten))
+
+  const after = parse(await api.tool.graphyloop_memory_search.execute({ query: 'retract' }))
+  assert.ok(
+    !after.search.results.some((m) => m.id === hit.id),
+    'the retracted memory is gone from later recalls'
+  )
 })
 
 test('refuses to run in the home directory', async () => {

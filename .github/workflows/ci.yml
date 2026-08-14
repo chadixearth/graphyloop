@@ -36,6 +36,7 @@ jobs:
           test -f "$SANDBOX/.graphyloop/graphyloop/cli.mjs"
           test -f "$SANDBOX/.graphyloop/mcp-server.mjs"
           test -f "$SANDBOX/.graphyloop/lib/mcp.mjs"
+          test -f "$SANDBOX/.graphyloop/lib/engine.mjs"
           test -d "$SANDBOX/.claude/agents"
           test -f "$SANDBOX/.codex/config.toml"
           test -f "$SANDBOX/.cursor/mcp.json"
@@ -54,6 +55,7 @@ jobs:
           tar -tzf graphyloop-*.tgz > /tmp/graphyloop-files.txt
           grep -q 'package/bin/graphyloop.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/lib/mcp.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/engine.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/mcp-server.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/plugin/graphyloop/plugin.js' /tmp/graphyloop-files.txt
           grep -q 'package/adapter/cli.mjs' /tmp/graphyloop-files.txt

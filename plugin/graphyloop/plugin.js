@@ -234,17 +234,32 @@ export default async (input) => {
       }),
 
       graphyloop_memory_search: tool({
-        description: 'Keyword-search stored graphyloop memories (decisions, patterns, lessons from past tasks). Supplements PMB recall.',
+        description: 'Keyword-search stored graphyloop memories (decisions, patterns, lessons from past tasks), ranked by match quality with a recency bias.',
         args: {
           query: tool.schema.string(),
           limit: tool.schema.string().optional().describe('Max results (default 10)'),
+          type: tool.schema.string().optional().describe('Only search this type: decision|pattern|lesson|event|task'),
         },
         async execute(args) {
           const a = ['memory-search', '--query', args.query];
           if (args.limit) a.push('--limit', args.limit);
+          if (args.type) a.push('--type', args.type);
           const res = ensureInit(projectDir);
           const search = runCli(a, projectDir);
           return JSON.stringify({ init: res, search }, null, 2);
+        },
+      }),
+
+      graphyloop_memory_forget: tool({
+        description: 'Delete one memory by id (ids come from graphyloop_memory_search). Use it to correct a wrong or outdated memory instead of letting it be recalled forever.',
+        args: {
+          id: tool.schema.string().describe('Memory id, e.g. mem-1700000000000-ab12'),
+        },
+        async execute(args) {
+          if (!args.id || !args.id.trim()) return JSON.stringify({ error: 'id is required (take it from graphyloop_memory_search)' });
+          const res = ensureInit(projectDir);
+          const forget = runCli(['memory-forget', '--id', args.id], projectDir);
+          return JSON.stringify({ init: res, forget }, null, 2);
         },
       }),
 

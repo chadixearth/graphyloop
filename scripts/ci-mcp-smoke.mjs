@@ -44,8 +44,8 @@ setTimeout(() => {
     console.error(`tools/list response not JSON: ${lines[1]}`);
     process.exit(1);
   }
-  if (!list.result || !Array.isArray(list.result.tools) || list.result.tools.length !== 8) {
-    console.error(`expected 8 tools, got: ${JSON.stringify(list.result).slice(0, 200)}`);
+  if (!list.result || !Array.isArray(list.result.tools) || list.result.tools.length !== 9) {
+    console.error(`expected 9 tools, got: ${JSON.stringify(list.result).slice(0, 200)}`);
     process.exit(1);
   }
   console.log('MCP_SERVER_OK');

@@ -19,9 +19,10 @@ import { fileURLToPath } from 'node:url'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const MCP_SERVER = join(REPO_ROOT, 'mcp-server.mjs')
 const ADAPTER_CLI = join(REPO_ROOT, 'adapter', 'cli.mjs')
+const ENGINE = join(REPO_ROOT, 'lib', 'engine.mjs')
 const PKG_VERSION = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')).version
 
-// The 8 tools the contract mandates.
+// The tools the contract mandates.
 const EXPECTED_TOOLS = [
   'agent_spawn',
   'agent_list',
@@ -30,6 +31,7 @@ const EXPECTED_TOOLS = [
   'task_record',
   'memory_store',
   'memory_search',
+  'memory_forget',
   'shutdown',
 ]
 
@@ -131,6 +133,10 @@ before(async () => {
   fakeCli = join(homeDir, '.graphyloop', 'graphyloop', 'cli.mjs')
   mkdirSync(dirname(fakeCli), { recursive: true })
   copyFileSync(ADAPTER_CLI, fakeCli)
+  // The CLI imports ../lib/engine.mjs, so the fake home has to mirror the
+  // installed tree or it dies with ERR_MODULE_NOT_FOUND.
+  mkdirSync(join(homeDir, '.graphyloop', 'lib'), { recursive: true })
+  copyFileSync(ENGINE, join(homeDir, '.graphyloop', 'lib', 'engine.mjs'))
 
   // graphyloop CLI refuses memory ops until init; pre-initialize the temp project.
   const init = spawnSync(process.execPath, [fakeCli, 'init'], {
@@ -180,15 +186,15 @@ test('ping returns empty result', { timeout: 15000 }, async () => {
   assert.deepEqual(msg.result, {})
 })
 
-test('tools/list returns the 8 contracted tools with schemas', { timeout: 15000 }, async () => {
+test('tools/list returns the 9 contracted tools with schemas', { timeout: 15000 }, async () => {
   const msg = await rpc('tools/list', {})
   assert.ok(Array.isArray(msg.result.tools))
-  assert.equal(msg.result.tools.length, 8, `expected 8 tools, got ${msg.result.tools.length}`)
+  assert.equal(msg.result.tools.length, EXPECTED_TOOLS.length, `expected ${EXPECTED_TOOLS.length} tools, got ${msg.result.tools.length}`)
   const names = msg.result.tools.map((t) => t.name)
   for (const expected of EXPECTED_TOOLS) {
     assert.ok(names.includes(expected), `missing tool ${expected}`)
   }
-  assert.equal(new Set(names).size, 8, 'duplicate tool names')
+  assert.equal(new Set(names).size, EXPECTED_TOOLS.length, 'duplicate tool names')
   for (const tool of msg.result.tools) {
     assert.equal(typeof tool.description, 'string', `${tool.name}: description`)
     assert.ok(tool.inputSchema && typeof tool.inputSchema === 'object', `${tool.name}: inputSchema`)
@@ -301,29 +307,101 @@ test('server exits with code 0 on stdin EOF', { timeout: 15000 }, async () => {
   assert.equal(code, 0, `EOF exit code was ${code}`)
 })
 
-test('missing graphyloop CLI: tools/list works, tools/call returns isError', { timeout: 15000 }, async () => {
-  // Force an empty fake home via GRAPHYLOOP_HOME so the default CLI path
-  // (~/.graphyloop/graphyloop/cli.mjs) is guaranteed missing regardless of the
-  // machine's real ~/.graphyloop state.
+test('a pinned CLI that does not exist is reported, not silently ignored', { timeout: 15000 }, async () => {
+  // GRAPHYLOOP_CLI pins the server to one engine build. If that pin is bad the
+  // server must say so rather than quietly running a different engine.
   const emptyHome = mkdtempSync(join(tmpdir(), 'graphyloop-mcp-empty-'))
-  const s = spawnServer({ GRAPHYLOOP_HOME: emptyHome, GRAPHYLOOP_CLI: undefined })
+  const s = spawnServer({ GRAPHYLOOP_HOME: emptyHome, GRAPHYLOOP_CLI: join(emptyHome, 'missing.mjs') })
   const r = createLineReader(s.stdout)
   try {
-    s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })}\n`)
+    s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })}
+`)
     const list = JSON.parse(await r.nextLine(5000))
-    assert.equal(list.result.tools.length, 8)
+    assert.equal(list.result.tools.length, EXPECTED_TOOLS.length)
 
     s.stdin.write(
-      `${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'memory_search', arguments: { query: 'x' } } })}\n`
+      `${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'memory_search', arguments: { query: 'x' } } })}
+`
     )
     const call = JSON.parse(await r.nextLine(5000))
     assert.equal(call.result.isError, true)
-    assert.ok(call.result.content[0].text.includes('graphyloop CLI not found'), call.result.content[0].text)
+    assert.ok(call.result.content[0].text.includes('graphyloop engine not found'), call.result.content[0].text)
   } finally {
     if (s.exitCode === null) {
       s.kill('SIGTERM')
       await waitExit(s, 3000).catch(() => {})
     }
     rmSync(emptyHome, { recursive: true, force: true })
+  }
+})
+
+// With no CLI on disk and no pin, the only way these can succeed is the
+// in-process engine — which is the point: no child process per tool call.
+test('runs in-process with no CLI installed at all', { timeout: 15000 }, async () => {
+  const emptyHome = mkdtempSync(join(tmpdir(), 'graphyloop-mcp-inproc-home-'))
+  const proj = mkdtempSync(join(tmpdir(), 'graphyloop-mcp-inproc-proj-'))
+  const s = spawn(process.execPath, [MCP_SERVER], {
+    env: { ...process.env, GRAPHYLOOP_PROJECT_ROOT: proj, GRAPHYLOOP_HOME: emptyHome, GRAPHYLOOP_CLI: '' },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  })
+  s.stderr.resume()
+  const r = createLineReader(s.stdout)
+  try {
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'memory_store', arguments: { content: 'in-process store' } } })}
+`
+    )
+    const stored = JSON.parse(await r.nextLine(5000))
+    assert.equal(stored.result.isError, false, stored.result.content[0].text)
+
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'memory_search', arguments: { query: 'in-process' } } })}
+`
+    )
+    const found = JSON.parse(await r.nextLine(5000))
+    const data = JSON.parse(found.result.content[0].text)
+    assert.ok(data.results.some((m) => m.content === 'in-process store'), found.result.content[0].text)
+
+    // and the new correction path: forget it again
+    const id = data.results.find((m) => m.content === 'in-process store').id
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'memory_forget', arguments: { id } } })}
+`
+    )
+    const forgotten = JSON.parse(await r.nextLine(5000))
+    assert.equal(forgotten.result.isError, false, forgotten.result.content[0].text)
+    assert.equal(JSON.parse(forgotten.result.content[0].text).removed.id, id)
+  } finally {
+    if (s.exitCode === null) {
+      s.kill('SIGTERM')
+      await waitExit(s, 3000).catch(() => {})
+    }
+    rmSync(emptyHome, { recursive: true, force: true })
+    rmSync(proj, { recursive: true, force: true })
+  }
+})
+
+// Spawns its own server: the shared one is already gone by this point, having
+// been exited by the shutdown test above.
+test('initialize echoes a newer protocol version the client asks for', { timeout: 15000 }, async () => {
+  const s = spawnServer({})
+  const r = createLineReader(s.stdout)
+  try {
+    s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } })}
+`)
+    assert.equal(JSON.parse(await r.nextLine(5000)).result.protocolVersion, '2025-06-18')
+
+    s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'initialize', params: { protocolVersion: '1999-01-01' } })}
+`)
+    assert.equal(
+      JSON.parse(await r.nextLine(5000)).result.protocolVersion,
+      '2024-11-05',
+      'an unknown version falls back to the one we implement'
+    )
+  } finally {
+    if (s.exitCode === null) {
+      s.kill('SIGTERM')
+      await waitExit(s, 3000).catch(() => {})
+    }
   }
 })
