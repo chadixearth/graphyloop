@@ -187,6 +187,29 @@ test('memory log is capped so the state file cannot grow without bound', () => {
   assert.equal(state.memories.at(-1).content, 'entry 5', 'newest entry kept')
 })
 
+test('task queue is capped, but unfinished work is never dropped', () => {
+  cli(['init'])
+  cli(['spawn', '--type', 'coder', '--id', 'c1'])
+  const env = { GRAPHYLOOP_MAX_TASKS: '4' }
+
+  // six settled tasks, then two that stay open
+  for (let i = 0; i < 6; i++) {
+    cli(['distribute', '--tasks', JSON.stringify([{ id: `done-${i}`, type: 'code', description: 'x', priority: 'low' }])], env)
+    cli(['record', '--taskId', `done-${i}`, '--status', 'completed'], env)
+  }
+  cli(['distribute', '--tasks', JSON.stringify([
+    { id: 'open-1', type: 'code', description: 'x', priority: 'low' },
+    { id: 'open-2', type: 'code', description: 'x', priority: 'low' },
+  ])], env)
+
+  const queue = JSON.parse(readFileSync(stateFile(), 'utf8')).taskQueue
+  assert.ok(queue.length <= 4, `queue capped, got ${queue.length}`)
+  const ids = queue.map((t) => t.id)
+  assert.ok(ids.includes('open-1') && ids.includes('open-2'), `pending work kept: ${ids}`)
+  assert.ok(!ids.includes('done-0'), `oldest settled task dropped first: ${ids}`)
+  assert.equal(cli(['status'], env).pendingTasks, 2, 'pendingTasks still accurate after trimming')
+})
+
 // ---------------------------------------------------------------------------
 // Argument handling
 // ---------------------------------------------------------------------------

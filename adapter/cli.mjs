@@ -27,6 +27,9 @@ const PROJECT_ROOT = process.env.GRAPHYLOOP_PROJECT_ROOT || process.cwd()
 // Memories are append-only and every command rewrites the whole state file, so
 // an uncapped log turns each tool call into a growing read + write.
 const MAX_MEMORIES = Math.max(1, Number(process.env.GRAPHYLOOP_MAX_MEMORIES) || 2000)
+// The task queue grows on every distribute and nothing ever removed finished
+// entries, so a long-lived project paid for its whole history on every command.
+const MAX_TASKS = Math.max(1, Number(process.env.GRAPHYLOOP_MAX_TASKS) || 500)
 
 const DEFAULT_CAPS = {
   coder: ['code', 'debug', 'implement', 'refactor'],
@@ -118,6 +121,15 @@ function saveState(s) {
   mkdirSync(dirname(path), { recursive: true })
   if (Array.isArray(s.memories) && s.memories.length > MAX_MEMORIES) {
     s.memories = s.memories.slice(-MAX_MEMORIES)
+  }
+  // Unfinished work is never dropped; only the oldest settled tasks are, so
+  // pendingTasks and load balancing stay correct at any history length.
+  if (Array.isArray(s.taskQueue) && s.taskQueue.length > MAX_TASKS) {
+    const isOpen = (t) => t.status === 'pending' || t.status === 'in-progress'
+    const open = s.taskQueue.filter(isOpen)
+    const settled = s.taskQueue.filter((t) => !isOpen(t))
+    const keep = new Set([...open, ...settled.slice(-Math.max(0, MAX_TASKS - open.length))])
+    s.taskQueue = s.taskQueue.filter((t) => keep.has(t))
   }
   // tmp + rename: parallel swarm agents share this file, and a crash mid-write
   // must never leave an unparsable state behind.
