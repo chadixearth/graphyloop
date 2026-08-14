@@ -1,0 +1,1 @@
+Use agent-chadi in DISCUSS-FIRST mode. Inspect only needed files with batched tools. Present a concise plan: lane chosen, what I'll do, files touched, approach, risks, optional parallel work if warranted, and verification plan. WAIT for user approval before implementing. Do NOT implement until the user says go/proceed/approved.

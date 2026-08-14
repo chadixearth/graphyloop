@@ -1,0 +1,1 @@
+Use agent-chadi. User pre-approved — skip DISCUSS-FIRST GATE. Classify the lane, dispatch the matching squad as parallel task calls in ONE tool-call block, then run tests, security checklist, and final diff review in the main loop. Update logs when relevant and report verified results.

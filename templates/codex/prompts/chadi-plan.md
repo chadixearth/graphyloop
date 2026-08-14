@@ -1,0 +1,1 @@
+Use agent-chadi. Do intake, acceptance criteria, discovery, architecture map, risk classification, and PARALLEL_PLAN.md. Use matching skills and available codegraph/context7 tools when relevant. Do not implement yet unless the user already asked to proceed.

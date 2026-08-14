@@ -1,0 +1,1 @@
+Use agent-chadi. Inspect installed original skills from .opencode/skills, ~/.config/opencode/skills, ~/.opencode/skills, and project-local .opencode/skills. Update CHADI_SKILL_SOURCES.md. Do not fake missing ECC or Superpowers skills. Do not create Claude files.

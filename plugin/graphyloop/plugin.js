@@ -15,7 +15,12 @@ import path from 'node:path';
 import { tool } from '@opencode-ai/plugin';
 
 const HOME = os.homedir();
-const GRAPHYLOOP_CLI = path.join(HOME, '.opencode', 'graphyloop', 'cli.mjs');
+// CLI location: env override, then the graphyloop core install target, then
+// the legacy pre-npx location (backwards compatibility for existing installs).
+const GRAPHYLOOP_CLI = process.env.GRAPHYLOOP_CLI
+  || (existsSync(path.join(HOME, '.graphyloop', 'graphyloop', 'cli.mjs'))
+    ? path.join(HOME, '.graphyloop', 'graphyloop', 'cli.mjs')
+    : path.join(HOME, '.opencode', 'graphyloop', 'cli.mjs'));
 const OPENCODE_ROOT = path.join(HOME, '.config', 'opencode');
 const NODE_CANDIDATES = [
   process.env.GRAPHYLOOP_NODE,

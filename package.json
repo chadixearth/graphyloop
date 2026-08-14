@@ -1,11 +1,28 @@
 {
   "name": "graphyloop",
   "version": "0.1.0",
-  "description": "Agentic workflow kit for OpenCode: graphyloop swarm + memory plugin, chadi squad agents, 5-gate workflow, one-command installer",
+  "description": "Agentic workflow kit for any AI coding harness: graphyloop swarm + memory (plugin + MCP server), chadi squad agents, 5-gate workflow. Install via npx.",
   "type": "module",
-  "bin": { "graphyloop": "setup.mjs" },
-  "scripts": { "setup": "node setup.mjs" },
+  "bin": { "graphyloop": "bin/graphyloop.mjs" },
+  "scripts": {
+    "setup": "node setup.mjs",
+    "test": "node --test test/",
+    "pack": "npm pack"
+  },
   "engines": { "node": ">=20.0.0" },
   "license": "MIT",
-  "files": ["setup.mjs", "adapter", "plugin", "agents", "workflow", "config", "README.md", "LICENSE"]
+  "files": [
+    "setup.mjs",
+    "bin",
+    "lib",
+    "templates",
+    "mcp-server.mjs",
+    "adapter",
+    "plugin",
+    "agents",
+    "workflow",
+    "config",
+    "README.md",
+    "LICENSE"
+  ]
 }

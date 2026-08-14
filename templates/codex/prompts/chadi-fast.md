@@ -1,0 +1,1 @@
+Use agent-chadi. chadi-fast mode — classify the lane first, then dispatch the matching squad as parallel task calls in ONE tool-call block. Trivial stays inline. Main agent still owns tests, security checklist, diff review, and the final verified report. Standard work auto-proceeds; Heavy work waits for approval unless user already pre-approved.

@@ -1,0 +1,1 @@
+Use agent-chadi. The user is asking something confusing or likely recent. Before answering, check whether last30days is installed. If available, use it to research current public context. If not available, say what fallback you used. Then answer clearly.

@@ -191,3 +191,105 @@ Set `DEEPSEEK_API_KEY` to let the graphyloop CLI make direct DeepSeek API calls 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+## Install via npx
+
+GraphyLoop ships as an npm package with a `graphyloop` CLI. No clone needed:
+
+```sh
+npx graphyloop install                 # install for every harness detected on this machine
+# fresh machine, no harness configs yet? force all four:
+npx graphyloop install --harness all
+npx graphyloop install --harness opencode   # install for one harness only
+npx graphyloop install --harness all        # install for all four harnesses
+```
+
+Flags (all optional):
+
+| Flag | Meaning |
+| --- | --- |
+| `--harness <name>` | `opencode` \| `claude` \| `codex` \| `cursor` \| `all` (default: all detected) |
+| `--home <DIR>` | Home directory to install into (default `os.homedir()`); overrides all harness root resolution |
+| `--force` | Overwrite existing files (originals backed up as `*.bak-<timestamp>`) |
+| `--skip-agents` | Skip agent/prompt file install |
+| `--skip-workflow` | Skip `AGENTS.md` rule install |
+| `--no-config-merge` | Skip `opencode.json` merge (plugin/commands/default_agent) |
+| `--config-dir <DIR>` | OpenCode config root (default `<home>/.config/opencode`) |
+| `--graphyloop-dir <DIR>` | GraphyLoop adapter target (default `<home>/.graphyloop/graphyloop`) |
+
+Other commands:
+
+```sh
+npx graphyloop doctor              # detect harnesses, print table (exit 0)
+npx graphyloop status [--json]     # graphyloop swarm status via core CLI
+npx graphyloop uninstall           # remove only what graphyloop added
+npx graphyloop mcp                 # run the MCP stdio server
+npx graphyloop --version | --help
+```
+
+Success prints `GRAPH_LOOP_INSTALLED`; any failure prints `ERROR: ...` and exits 1. Unknown flags are ignored (forward compatibility).
+
+`node setup.mjs` still works — it is now a thin delegate to `bin/graphyloop.mjs install --harness opencode` with the legacy flags mapped 1:1.
+
+## Harness support
+
+| Harness | Agents | Commands | Rules | Tools |
+| --- | --- | --- | --- | --- |
+| **opencode** | 24-agent chadi squad → `~/.config/opencode/agents/` | 12 slash commands merged into `opencode.json` | `AGENTS.md` → `~/.config/opencode/` | graphyloop plugin (`plugins/graphyloop/`, `graphyloop_*` tools) |
+| **claude** | agents → `~/.claude/agents/` | 12 `chadi-*.md` → `~/.claude/commands/` | `AGENTS.md` → `~/.claude/` | MCP — `mcpServers.graphyloop` merged into `~/.claude.json` |
+| **codex** | 12 prompts → `~/.codex/prompts/` | — | `AGENTS.md` → `~/.codex/` | MCP — `[mcp_servers.graphyloop]` appended to `~/.codex/config.toml` |
+| **cursor** | — | — | `AGENTS.md` → `~/.cursor/rules/` | MCP — `mcpServers.graphyloop` merged into `~/.cursor/mcp.json` |
+
+Installation is idempotent and never overwrites user config keys; modified files are backed up as `*.bak-<timestamp>` before any change.
+
+## MCP tools
+
+Harnesses without a plugin system (Claude Code, Codex, Cursor) drive the graphyloop swarm through an MCP stdio server installed at `~/.graphyloop/mcp-server.mjs`. It exposes 8 tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `agent_spawn` | Spawn a swarm agent (`type`, optional `id`/`capabilities`/`role`). Max 8 agents. |
+| `agent_list` | List swarm agents. |
+| `task_distribute` | Distribute tasks across swarm agents; returns assignments. |
+| `swarm_state` | Show swarm status: agents, tasks completed/failed, memory, pending. |
+| `task_record` | Record a task result (`taskId`, `status`, optional `agentId`/`error`). |
+| `memory_store` | Store a persistent memory entry (`content`, optional `agent`/`type`/`metadata`). |
+| `memory_search` | Keyword-search stored memories (`query`, optional `limit`). |
+| `shutdown` | Shut down the swarm (keeps memory). |
+
+Newline-delimited JSON-RPC 2.0 over stdio; arguments are validated before execution.
+
+## Core location
+
+Everything shared lives under `~/.graphyloop/` (installed by the core step of every `graphyloop install`):
+
+| Path | Contents |
+| --- | --- |
+| `~/.graphyloop/graphyloop/` | GraphyLoop CLI + swarm/memory engine (copied from `adapter/`) |
+| `~/.graphyloop/plugins/graphyloop/` | OpenCode plugin exposing `graphyloop_*` tools |
+| `~/.graphyloop/mcp-server.mjs` | MCP stdio server used by claude/codex/cursor |
+
+Swarm + memory state itself lives per project at `<project>/.opencode/graphyloop/state.json`.
+
+## Uninstall via npx
+
+```sh
+npx graphyloop uninstall            # remove graphyloop entries for detected harnesses
+npx graphyloop uninstall --harness opencode
+npx graphyloop uninstall --home <DIR>
+```
+
+Uninstall removes **only what graphyloop added**: the core files under `~/.graphyloop/`, harness agent/command/prompt files it copied, `mcpServers.graphyloop` / `[mcp_servers.graphyloop]` config entries, the graphyloop plugin entry + commands merged into `opencode.json`, and `AGENTS.md` copies that are byte-identical to the shipped file. Your user data and every `*.bak-*` backup are kept. Files you edited after install are left alone.
+
+## Troubleshooting (npx CLI)
+
+**"graphyloop CLI not found at `<home>/.graphyloop/graphyloop/cli.mjs`"** — the core step did not run or the file was removed. Re-run `npx graphyloop install`. `graphyloop status` prints this when the core CLI is missing.
+
+**MCP server location** — the MCP entry for claude/codex/cursor points at `~/.graphyloop/mcp-server.mjs` (this supersedes any earlier `~/.opencode/graphyloop` paths). After a fresh install, restart the harness so it re-reads its MCP config.
+
+**"skipped: not a project root"** — the graphyloop plugin refuses to run in system directories, your home directory, or the OpenCode config directory (it would litter state files there and fail on Windows system dirs). Open a real repository instead.
+
+**Re-running install is safe** — idempotent: existing files are skipped (or backed up as `*.bak-<timestamp>` with `--force`), and your config keys are preserved.
+
