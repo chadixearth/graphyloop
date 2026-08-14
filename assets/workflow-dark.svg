@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 448" width="1000" height="448" role="img" aria-label="graphyloop five-gate delivery workflow: classify, discover, implement, verify, report, over a persistent memory store">
+  <rect width="1000" height="448" rx="18" fill="#0D1117"/>
+  <text x="32" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="1.6" fill="#9198A1">5-GATE DELIVERY WORKFLOW</text>
+  <line x1="204" y1="154" x2="212" y2="154" stroke="#484F58" stroke-width="2"/><path d="M220 154 l-7 -4.5 v9 z" fill="#484F58"/>
+    <line x1="396" y1="154" x2="404" y2="154" stroke="#484F58" stroke-width="2"/><path d="M412 154 l-7 -4.5 v9 z" fill="#484F58"/>
+    <line x1="588" y1="154" x2="596" y2="154" stroke="#484F58" stroke-width="2"/><path d="M604 154 l-7 -4.5 v9 z" fill="#484F58"/>
+    <line x1="780" y1="154" x2="788" y2="154" stroke="#484F58" stroke-width="2"/><path d="M796 154 l-7 -4.5 v9 z" fill="#484F58"/>
+  
+    <path d="M692 106 L692 88 Q692 78 682 78 L510 78 Q500 78 500 88 L500 98"
+          fill="none" stroke="#2DD4BF" stroke-width="1.75" stroke-dasharray="5 4"/>
+    <path d="M500 105 l-4.5 -7 h9 z" fill="#2DD4BF"/>
+    <text x="596" y="69" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" fill="#2DD4BF" text-anchor="middle">fail → 1 retry</text>
+  
+    <g>
+      <rect x="32" y="106" width="168" height="96" rx="14" fill="#161B22" stroke="#30363D"/>
+      <circle cx="58" cy="132" r="13" fill="#2DD4BF"/>
+      <text x="58" y="136.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#04231F" text-anchor="middle">1</text>
+      <text x="80" y="137" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="650" fill="#E6EDF3">Classify</text>
+      <text x="50" y="164" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">trivial · standard</text>
+      <text x="50" y="180" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">heavy → route</text>
+    </g>
+    <g>
+      <rect x="224" y="106" width="168" height="96" rx="14" fill="#161B22" stroke="#30363D"/>
+      <circle cx="250" cy="132" r="13" fill="#2DD4BF"/>
+      <text x="250" y="136.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#04231F" text-anchor="middle">2</text>
+      <text x="272" y="137" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="650" fill="#E6EDF3">Discover</text>
+      <text x="242" y="164" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">parallel explore,</text>
+      <text x="242" y="180" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">recall, freeze contract</text>
+    </g>
+    <g>
+      <rect x="416" y="106" width="168" height="96" rx="14" fill="#161B22" stroke="#30363D"/>
+      <circle cx="442" cy="132" r="13" fill="#2DD4BF"/>
+      <text x="442" y="136.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#04231F" text-anchor="middle">3</text>
+      <text x="464" y="137" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="650" fill="#E6EDF3">Implement</text>
+      <text x="434" y="164" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">parallel workers,</text>
+      <text x="434" y="180" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">exclusive file ownership</text>
+    </g>
+    <g>
+      <rect x="608" y="106" width="168" height="96" rx="14" fill="#161B22" stroke="#30363D"/>
+      <circle cx="634" cy="132" r="13" fill="#2DD4BF"/>
+      <text x="634" y="136.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#04231F" text-anchor="middle">4</text>
+      <text x="656" y="137" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="650" fill="#E6EDF3">Verify</text>
+      <text x="626" y="164" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">tests · lint · security</text>
+      <text x="626" y="180" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">· review — one wave</text>
+    </g>
+    <g>
+      <rect x="800" y="106" width="168" height="96" rx="14" fill="#161B22" stroke="#30363D"/>
+      <circle cx="826" cy="132" r="13" fill="#2DD4BF"/>
+      <text x="826" y="136.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#04231F" text-anchor="middle">5</text>
+      <text x="848" y="137" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="650" fill="#E6EDF3">Report</text>
+      <text x="818" y="164" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">evidence-first summary</text>
+      <text x="818" y="180" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">+ metrics</text>
+    </g>
+  <path d="M500 202 L500 222" fill="none" stroke="#484F58" stroke-width="1.75"/>
+    <path d="M352 222 L648 222" fill="none" stroke="#484F58" stroke-width="1.75"/>
+    <path d="M352 222 Q344 222 344 230 L344 243" fill="none" stroke="#484F58" stroke-width="1.75"/><path d="M344 251 l-4.5 -7 h9 z" fill="#484F58"/>
+    <path d="M448 222 L448 243" fill="none" stroke="#484F58" stroke-width="1.75"/><path d="M448 251 l-4.5 -7 h9 z" fill="#484F58"/>
+    <path d="M552 222 L552 243" fill="none" stroke="#484F58" stroke-width="1.75"/><path d="M552 251 l-4.5 -7 h9 z" fill="#484F58"/>
+    <path d="M648 222 Q656 222 656 230 L656 243" fill="none" stroke="#484F58" stroke-width="1.75"/><path d="M656 251 l-4.5 -7 h9 z" fill="#484F58"/>
+  
+      <rect x="298" y="252" width="92" height="28" rx="14" fill="#0D1117" stroke="#30363D"/>
+      <text x="344" y="270.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1" text-anchor="middle">explore</text>
+      <rect x="402" y="252" width="92" height="28" rx="14" fill="#0D1117" stroke="#30363D"/>
+      <text x="448" y="270.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1" text-anchor="middle">backend</text>
+      <rect x="506" y="252" width="92" height="28" rx="14" fill="#0D1117" stroke="#30363D"/>
+      <text x="552" y="270.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1" text-anchor="middle">frontend</text>
+      <rect x="610" y="252" width="92" height="28" rx="14" fill="#0D1117" stroke="#30363D"/>
+      <text x="656" y="270.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1" text-anchor="middle">test</text>
+  
+    <rect x="32" y="330" width="936" height="66" rx="16" fill="#0E2B28" stroke="#155E58"/>
+    <text x="56" y="358" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="650" fill="#E6EDF3">Persistent memory</text>
+    <text x="56" y="378" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9198A1">&lt;project&gt;/.graphyloop/state.json · lock-guarded · survives restarts and new sessions</text>
+
+    <path d="M254 330 L254 210" stroke="#2DD4BF" stroke-width="1.75"/>
+    <path d="M254 204 l-4.5 7 h9 z" fill="#2DD4BF"/>
+    <text x="263" y="316" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" fill="#2DD4BF">recall</text>
+
+    <path d="M884 202 L884 324" stroke="#2DD4BF" stroke-width="1.75"/>
+    <path d="M884 330 l-4.5 -7 h9 z" fill="#2DD4BF"/>
+    <text x="893" y="316" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" fill="#2DD4BF">store</text>
+</svg>

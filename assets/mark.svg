@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="graphyloop: an octopus whose eight arms stand for the swarm's eight agents, inside an open loop">
+  <g transform="translate(0 0)">
+    <path d="M71.6 15.4 A46 46 0 1 1 24.4 15.4" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+    <g fill="none" stroke="#0D9488" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M62.5 45.96 C62.5 54.37 72.61 54.96 79.01 57.29 C82.18 58.44 79.91 53.06 80.55 53.06"/>
+      <path d="M58 47.53 C58 59.85 67.44 64.77 74.62 71.7 C77.31 74.31 77.55 68.11 78.09 68.11"/>
+      <path d="M54 48.57 C54 62.68 58.38 70.47 62.85 80.98 C64.31 84.43 67.16 79.03 67.45 79.03"/>
+      <path d="M50.5 49.09 C50.5 62.04 49.64 69.46 50.37 79.92 C50.61 83.28 54.81 79.6 54.86 79.6"/>
+      <path d="M33.5 45.96 C33.5 54.37 23.39 54.96 16.99 57.29 C13.82 58.44 16.09 53.06 15.45 53.06"/>
+      <path d="M38 47.53 C38 59.85 28.56 64.77 21.38 71.7 C18.69 74.31 18.45 68.11 17.91 68.11"/>
+      <path d="M42 48.57 C42 62.68 37.62 70.47 33.15 80.98 C31.69 84.43 28.84 79.03 28.55 79.03"/>
+      <path d="M45.5 49.09 C45.5 62.04 46.36 69.46 45.63 79.92 C45.39 83.28 41.19 79.6 41.14 79.6"/>
+      <path d="M31 45 C31 14 65 14 65 45 C60 50.5 36 50.5 31 45 Z"/>
+    </g>
+    <g fill="#0D9488">
+      <circle cx="42" cy="37" r="2.4"/>
+      <circle cx="54" cy="37" r="2.4"/>
+    </g>
+  </g>
+</svg>

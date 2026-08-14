@@ -1,5 +1,10 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chadixearth/graphyloop/main/assets/logo-dark.svg">
+  <img src="https://raw.githubusercontent.com/chadixearth/graphyloop/main/assets/logo.svg" alt="GraphyLoop" width="320">
+</picture>
+
 [![GraphyLoop](https://img.shields.io/badge/_GraphyLoop-any%20harness-6366f1?style=for-the-badge)](https://github.com/chadixearth/graphyloop)
 [![npm version](https://img.shields.io/npm/v/graphyloop?label=npx%20graphyloop&style=for-the-badge&logo=npm&color=cb3837)](https://www.npmjs.com/package/graphyloop)
 [![CI — Win/macOS/Linux × Node 20/22/24](https://github.com/chadixearth/graphyloop/actions/workflows/ci.yml/badge.svg)](https://github.com/chadixearth/graphyloop/actions/workflows/ci.yml)
@@ -187,6 +192,11 @@ codex mcp list       # look for: graphyloop ... enabled
 
 ## The 5-Gate Workflow
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chadixearth/graphyloop/main/assets/workflow-dark.svg">
+  <img src="https://raw.githubusercontent.com/chadixearth/graphyloop/main/assets/workflow.svg" alt="The five gates — classify, discover, implement, verify, report — running over a persistent memory store, with parallel workers under gate 3 and a single retry from verify back to implement">
+</picture>
+
 1. **Classify & route** — trivial → inline fix; standard → squad; heavy → full review loop.
 2. **Discovery + dispatch** — parallel exploration, memory recall, contract freeze before coding.
 3. **Implement + autofix** — flash workers, exclusive file ownership, 3-tier error recovery.
@@ -287,7 +297,7 @@ npm test          # 44 tests: MCP protocol E2E + engine state durability/concurr
 npm pack          # build the publishable tarball
 ```
 
-**Structure:** `bin/` CLI entry · `lib/` installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/cli.mjs` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files · `scripts/` test runner + CI smoke.
+**Structure:** `bin/` CLI entry · `lib/` installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/cli.mjs` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files · `scripts/` test runner + CI smoke · `assets/` logo + diagrams (SVG, light/dark pairs; referenced by absolute URL so npm renders them too, and kept out of the tarball).
 
 `adapter/*.ts` is the original TypeScript design reference — nothing imports it and no build step compiles it, so it is neither published nor installed (CI fails the build if a `.ts` file reaches the tarball).
 
