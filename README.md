@@ -183,6 +183,17 @@ npm pack          # build the publishable tarball
 
 Structure: `bin/` CLI entry · `lib/` installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files. CI runs the full matrix (Windows/macOS/Linux × Node 20/22/24) on every push, including a real install + MCP handshake smoke.
 
+### Releasing a new version
+
+```bash
+npm test                          # 1. verify locally
+npm version patch                 # 2. bump (patch | minor | major) — creates a git tag
+npm publish                       # 3. ship (2FA prompt) — never re-publish the same version
+git push && git push --tags       # 4. push code + tag; CI re-verifies the full matrix
+```
+
+Preview first: `npm publish --dry-run`. Users update with `npx -y graphyloop@latest install --force`.
+
 ## License
 
 MIT © 2026 chadixearth
