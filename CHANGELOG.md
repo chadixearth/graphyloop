@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
-## [0.1.3] — unreleased
+## [0.1.3] — 2026-08-14
 
 ### Added
 - **`memory_forget`** (MCP) / **`graphyloop_memory_forget`** (OpenCode plugin) /
