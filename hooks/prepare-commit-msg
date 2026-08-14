@@ -1,0 +1,8 @@
+#!/bin/sh
+# Append the Claude co-author trailer to every commit in this repo unless
+# it is already present (Anthropic's standard AI-credit convention).
+FILE="$1"
+if ! grep -q "Co-authored-by: Claude" "$FILE" 2>/dev/null; then
+  printf '\nCo-authored-by: Claude <noreply@anthropic.com>\n' >> "$FILE"
+fi
+exit 0
