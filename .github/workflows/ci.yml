@@ -45,32 +45,15 @@ jobs:
         run: |
           SANDBOX=$(mktemp -d)
           PROJ=$(mktemp -d)
-          node bin/graphyloop.mjs install --home "$SANDBOX" --harness all --force > /dev/null 2>&1
-          GRAPHYLOOP_PROJECT_ROOT="$PROJ" node -e "
-            const { spawn } = require('child_process');
-            const path = require('path');
-            const os = require('os');
-            const s = spawn(process.execPath, [path.join(os.homedir ? '$SANDBOX' : '', '.graphyloop', 'mcp-server.mjs')], { stdio: ['pipe', 'pipe', 'pipe'] });
-            let out = '';
-            s.stdout.on('data', (d) => { out += d; });
-            s.stderr.on('data', (d) => { console.error(String(d)); process.exit(1); });
-            s.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }) + '\n');
-            s.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }) + '\n');
-            setTimeout(() => {
-              const lines = out.trim().split('\n');
-              if (lines.length !== 2) { console.error('expected 2 responses, got', lines.length); process.exit(1); }
-              const list = JSON.parse(lines[1]);
-              if (list.result.tools.length !== 8) { console.error('expected 8 tools'); process.exit(1); }
-              console.log('MCP_SERVER_OK');
-              process.exit(0);
-            }, 2000);
-          "
+          node bin/graphyloop.mjs install --home "$SANDBOX" --harness all --force
+          node scripts/ci-mcp-smoke.mjs --home "$SANDBOX" --proj "$PROJ"
       - name: Package tarball contains all shipped paths
         shell: bash
         run: |
           npm pack --silent > /dev/null
-          tar -tzf graphyloop-*.tgz | grep -q 'package/bin/graphyloop.mjs'
-          tar -tzf graphyloop-*.tgz | grep -q 'package/lib/mcp.mjs'
-          tar -tzf graphyloop-*.tgz | grep -q 'package/mcp-server.mjs'
-          tar -tzf graphyloop-*.tgz | grep -q 'package/plugin/graphyloop/plugin.js'
+          tar -tzf graphyloop-*.tgz > /tmp/graphyloop-files.txt
+          grep -q 'package/bin/graphyloop.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/mcp.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/mcp-server.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/plugin/graphyloop/plugin.js' /tmp/graphyloop-files.txt
           echo "TARBALL_OK"
