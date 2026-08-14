@@ -283,7 +283,7 @@ Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and t
 ## Development
 
 ```bash
-npm test          # 38 tests: MCP protocol E2E + engine state durability/concurrency + installer preservation/idempotency + uninstall round-trip
+npm test          # 44 tests: MCP protocol E2E + engine state durability/concurrency + OpenCode plugin + installer preservation/idempotency + uninstall round-trip
 npm pack          # build the publishable tarball
 ```
 
@@ -311,7 +311,7 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 | Version | Highlights |
 |---|---|
-| **0.1.2** | **Fix: MCP tools worked only after a manual init** — the swarm now initializes lazily on the first tool call, so Claude Code / Codex / Cursor work in a fresh project out of the box · **Fix: re-init after `shutdown` erased the whole memory log** · **Fix: parallel agents silently dropped each other's writes** — state is now lock-guarded (measured: 6 of 12 concurrent writes lost before, 12 of 12 kept after) · state moved to `<project>/.graphyloop/` with automatic migration from `.opencode/graphyloop/` · project-root guard extended to the MCP server · crash-safe atomic writes, corrupt-state quarantine, capped memory log · engine input validation (`--flag=value`, unknown agent types, duplicate ids, malformed task payloads, empty queries) · plugin surfaces CLI crashes/timeouts instead of swallowing them · uninstall no longer skips `AGENTS.md` when `opencode.json` is unparsable · `adapter/*.ts` (1.3k unrunnable lines) no longer published or installed · release gate rejects a tag that disagrees with `package.json` · 19 new tests (38 total) |
+| **0.1.2** | **Fix: MCP tools worked only after a manual init** — the swarm now initializes lazily on the first tool call, so Claude Code / Codex / Cursor work in a fresh project out of the box · **Fix: re-init after `shutdown` erased the whole memory log** · **Fix: parallel agents silently dropped each other's writes** — state is now lock-guarded (measured: 6 of 12 concurrent writes lost before, 12 of 12 kept after) · state moved to `<project>/.graphyloop/` with automatic migration from `.opencode/graphyloop/` · project-root guard extended to the MCP server · crash-safe atomic writes, corrupt-state quarantine, capped memory log · engine input validation (`--flag=value`, unknown agent types, duplicate ids, malformed task payloads, empty queries) · plugin surfaces CLI crashes/timeouts instead of swallowing them · uninstall no longer skips `AGENTS.md` when `opencode.json` is unparsable · `adapter/*.ts` (1.3k unrunnable lines) no longer published or installed · release gate rejects a tag that disagrees with `package.json` · first test coverage for the OpenCode plugin · 25 new tests (44 total) |
 | **0.1.1** | Complete rebrand to the GraphyLoop identity (engine, agents, tool names, config entries) · `graphcrew` agent squad · automatic npm releases via GitHub Actions (tag → test → publish) · copy-paste setup prompt for any AI harness · professional docs, CI matrix (Win/macOS/Linux × Node 20/22/24), AI co-author credits |
 | **0.1.0** | Initial release — one-command install for OpenCode, Claude Code, Codex, Cursor · 24-agent squad · 5-gate workflow · MCP server (8 tools) · persistent memory + swarm engine · zero runtime dependencies |
 
