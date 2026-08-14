@@ -34,7 +34,7 @@ jobs:
         run: node scripts/run-tests.mjs
 
       - name: Publish to npm (token)
-        if: ${{ github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) }}
+        if: ${{ github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) && env.NODE_AUTH_TOKEN != '' }}
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -44,6 +44,10 @@ jobs:
         run: npm publish --otp "${{ github.event.inputs.otp }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish skipped (no NPM_TOKEN secret, no otp input)
+        if: ${{ github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) && env.NODE_AUTH_TOKEN == '' }}
+        run: echo "PUBLISH_SKIPPED: add the NPM_TOKEN secret or run with the otp input to publish"
 
       - name: Dry run (pack + verify, no publish)
         if: ${{ github.event.inputs.dry_run == 'true' }}
