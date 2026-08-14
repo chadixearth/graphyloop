@@ -280,6 +280,8 @@ npm pack          # build the publishable tarball
 
 **CI** runs the full matrix (Windows/macOS/Linux × Node 20/22/24) on every push: syntax, tests, fresh-sandbox installer smoke, installed-MCP-server handshake, tarball contents.
 
+**Commits** carry the `Co-authored-by: Claude <noreply@anthropic.com>` trailer (AI-credit convention). Fresh clones: `git config core.hooksPath hooks` enables the automatic trailer hook (`hooks/prepare-commit-msg`).
+
 ### Releasing (automatic)
 
 ```bash
