@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax check all modules
+        shell: bash
+        run: |
+          for f in $(find . -name '*.mjs' -not -path './node_modules/*'); do
+            node --check "$f"
+          done
+      - name: Run test suite
+        shell: bash
+        run: node scripts/run-tests.mjs
+      - name: Installer smoke (fresh sandbox home)
+        shell: bash
+        run: |
+          SANDBOX=$(mktemp -d)
+          node bin/graphyloop.mjs install --home "$SANDBOX" --harness all --force > /tmp/install.log 2>&1
+          grep -q GRAPH_LOOP_INSTALLED /tmp/install.log
+          test -f "$SANDBOX/.graphyloop/graphyloop/cli.mjs"
+          test -f "$SANDBOX/.graphyloop/mcp-server.mjs"
+          test -f "$SANDBOX/.graphyloop/lib/mcp.mjs"
+          test -d "$SANDBOX/.claude/agents"
+          test -f "$SANDBOX/.codex/config.toml"
+          test -f "$SANDBOX/.cursor/mcp.json"
+          echo "INSTALLER_SMOKE_OK"
+      - name: Installed MCP server responds
+        shell: bash
+        run: |
+          SANDBOX=$(mktemp -d)
+          PROJ=$(mktemp -d)
+          node bin/graphyloop.mjs install --home "$SANDBOX" --harness all --force > /dev/null 2>&1
+          GRAPHYLOOP_PROJECT_ROOT="$PROJ" node -e "
+            const { spawn } = require('child_process');
+            const path = require('path');
+            const os = require('os');
+            const s = spawn(process.execPath, [path.join(os.homedir ? '$SANDBOX' : '', '.graphyloop', 'mcp-server.mjs')], { stdio: ['pipe', 'pipe', 'pipe'] });
+            let out = '';
+            s.stdout.on('data', (d) => { out += d; });
+            s.stderr.on('data', (d) => { console.error(String(d)); process.exit(1); });
+            s.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }) + '\n');
+            s.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }) + '\n');
+            setTimeout(() => {
+              const lines = out.trim().split('\n');
+              if (lines.length !== 2) { console.error('expected 2 responses, got', lines.length); process.exit(1); }
+              const list = JSON.parse(lines[1]);
+              if (list.result.tools.length !== 8) { console.error('expected 8 tools'); process.exit(1); }
+              console.log('MCP_SERVER_OK');
+              process.exit(0);
+            }, 2000);
+          "
+      - name: Package tarball contains all shipped paths
+        shell: bash
+        run: |
+          npm pack --silent > /dev/null
+          tar -tzf graphyloop-*.tgz | grep -q 'package/bin/graphyloop.mjs'
+          tar -tzf graphyloop-*.tgz | grep -q 'package/lib/mcp.mjs'
+          tar -tzf graphyloop-*.tgz | grep -q 'package/mcp-server.mjs'
+          tar -tzf graphyloop-*.tgz | grep -q 'package/plugin/graphyloop/plugin.js'
+          echo "TARBALL_OK"

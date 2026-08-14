@@ -117,6 +117,13 @@ before(() => {
     )
   )
 
+  // claude: user-authored agent (content differs from shipped — must survive uninstall)
+  write(
+    sandbox,
+    join('.claude', 'agents', 'my-custom-agent.md'),
+    '---\nname: my-custom-agent\ndescription: user-authored agent\ntools: Read\n---\n\nMy own agent.\n'
+  )
+
   // codex: existing [model] section + custom section
   write(
     sandbox,
@@ -137,6 +144,7 @@ before(() => {
     sandbox,
     join('.cursor', 'mcp.json'),
     JSON.stringify(
+
       {
         mcpServers: {
           github: { command: 'npx', args: ['@modelcontextprotocol/server-github'] },
@@ -193,7 +201,7 @@ test('install --harness all --force installs every harness and preserves user co
   assert.equal(Object.keys(claudeJson.mcpServers).filter((k) => k === 'graphyloop').length, 1)
 
   const claudeAgents = join(sandbox, '.claude', 'agents')
-  assert.equal(countMd(claudeAgents), AGENT_COUNT, 'claude agents dir populated')
+  assert.ok(countMd(claudeAgents) >= AGENT_COUNT, 'claude agents populated (shipped + user-authored preserved)')
   for (const f of readdirSync(claudeAgents).filter((f) => f.endsWith('.md'))) {
     const fm = frontmatterOf(readFileSync(join(claudeAgents, f), 'utf8'))
     const base = f.replace(/\.md$/, '')
@@ -321,6 +329,57 @@ test('--skip-agents leaves agent directories untouched', () => {
   assert.equal(res.status, 0, res.stdout + res.stderr)
   assert.equal(countMd(ocAgents), beforeOc, 'opencode agents unchanged')
   assert.equal(countMd(claudeAgents), beforeClaude, 'claude agents unchanged')
+})
+
+test('uninstall removes only graphyloop additions, keeps user config, exit 0', () => {
+  const res = runCli(['uninstall', '--home', sandbox])
+  assert.equal(res.status, 0, `uninstall exit 0: ${res.stdout + res.stderr}`)
+  assert.ok(res.stdout.includes('GRAPH_LOOP_UNINSTALLED'), res.stdout)
+
+  // user keys survive
+  const oc = JSON.parse(readFileSync(join(sandbox, '.config', 'opencode', 'opencode.json'), 'utf8'))
+  assert.equal(oc.model, 'user-model-keep', 'user model preserved after uninstall')
+  assert.equal(oc.command['user-custom-cmd'].description, 'user custom command', 'user command preserved after uninstall')
+  assert.equal(oc.default_agent, 'user-default-agent', 'user default_agent preserved after uninstall')
+  assert.ok(
+    !oc.plugin.some((p) => String(p).includes('graphyloop/plugin.js')),
+    'graphyloop plugin entry removed from opencode.json'
+  )
+  assert.ok(!Object.keys(oc.command).some((k) => k.startsWith('chadi-')), 'chadi commands removed from opencode.json')
+
+  const claudeJson = JSON.parse(readFileSync(join(sandbox, '.claude.json'), 'utf8'))
+  assert.ok(claudeJson.mcpServers.filesystem, 'user claude server preserved')
+  assert.equal(claudeJson.customKey, 'keep-me', 'user claude key preserved')
+  assert.ok(!claudeJson.mcpServers.graphyloop, 'graphyloop removed from .claude.json')
+
+  const toml = readFileSync(join(sandbox, '.codex', 'config.toml'), 'utf8')
+  assert.ok(toml.includes('[model]'), 'user codex section preserved')
+  assert.ok(!toml.includes('mcp_servers.graphyloop'), 'graphyloop section removed from config.toml')
+
+  const cursorJson = JSON.parse(readFileSync(join(sandbox, '.cursor', 'mcp.json'), 'utf8'))
+  assert.ok(cursorJson.mcpServers.github, 'user cursor server preserved')
+  assert.ok(!cursorJson.mcpServers.graphyloop, 'graphyloop removed from cursor mcp.json')
+
+  // core fully gone (backups *.bak-* may remain — that is by design)
+  assert.ok(!existsSync(join(sandbox, '.graphyloop', 'graphyloop', 'cli.mjs')), 'core cli removed')
+  assert.ok(!existsSync(join(sandbox, '.graphyloop', 'mcp-server.mjs')), 'mcp server removed')
+  assert.ok(!existsSync(join(sandbox, '.graphyloop', 'lib', 'mcp.mjs')), 'lib/mcp.mjs removed')
+
+  // user agents (seeded, content differs) survive
+  assert.ok(existsSync(join(sandbox, '.claude', 'agents', 'my-custom-agent.md')), 'user claude agent preserved')
+})
+
+test('re-install after uninstall restores everything (round trip)', () => {
+  const res = runCli(['install', '--home', sandbox, '--harness', 'all', '--force'])
+  assert.equal(res.status, 0, res.stdout + res.stderr)
+  assert.ok(res.stdout.includes('GRAPH_LOOP_INSTALLED'))
+  assert.ok(existsSync(join(sandbox, '.graphyloop', 'graphyloop', 'cli.mjs')), 'core restored')
+  assert.ok(existsSync(join(sandbox, '.graphyloop', 'lib', 'mcp.mjs')), 'lib restored')
+  const oc = JSON.parse(readFileSync(join(sandbox, '.config', 'opencode', 'opencode.json'), 'utf8'))
+  assert.ok(oc.plugin.some((p) => String(p).includes('graphyloop/plugin.js')), 'plugin entry restored')
+  assert.equal(Object.keys(oc.command).filter((k) => k.startsWith('chadi-')).length, COMMAND_COUNT, 'commands restored')
+  const toml = readFileSync(join(sandbox, '.codex', 'config.toml'), 'utf8')
+  assert.equal(countOccurrences(toml, '[mcp_servers.graphyloop]'), 1, 'codex section restored once')
 })
 
 test('doctor lists all four harnesses', () => {

@@ -6,10 +6,12 @@
   "bin": { "graphyloop": "bin/graphyloop.mjs" },
   "scripts": {
     "setup": "node setup.mjs",
-    "test": "node --test test/",
-    "pack": "npm pack"
+    "test": "node scripts/run-tests.mjs",
+    "pack": "npm pack",
+    "prepublishOnly": "node scripts/run-tests.mjs"
   },
   "engines": { "node": ">=20.0.0" },
+  "publishConfig": { "access": "public" },
   "license": "MIT",
   "files": [
     "setup.mjs",
