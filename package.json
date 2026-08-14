@@ -1,17 +1,23 @@
 {
   "name": "graphyloop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Agentic workflow kit for any AI coding harness: graphyloop swarm + memory (plugin + MCP server), chadi squad agents, 5-gate workflow. Install via npx.",
   "type": "module",
-  "bin": { "graphyloop": "bin/graphyloop.mjs" },
+  "bin": {
+    "graphyloop": "bin/graphyloop.mjs"
+  },
   "scripts": {
     "setup": "node setup.mjs",
     "test": "node scripts/run-tests.mjs",
     "pack": "npm pack",
     "prepublishOnly": "node scripts/run-tests.mjs"
   },
-  "engines": { "node": ">=20.0.0" },
-  "publishConfig": { "access": "public" },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "files": [
     "setup.mjs",
