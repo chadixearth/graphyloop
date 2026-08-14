@@ -303,6 +303,8 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 ## Credits
 
+Built with [**Claude**](https://www.anthropic.com/claude) (Anthropic) — AI-assisted engineering across design, implementation, and verification. Commits carry the standard `Co-authored-by: Claude <noreply@anthropic.com>` trailer.
+
 ## License
 
 MIT © 2026 chadixearth
