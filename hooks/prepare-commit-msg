@@ -1,8 +1,11 @@
 #!/bin/sh
-# Append the Claude co-author trailer to every commit in this repo unless
-# it is already present (Anthropic's standard AI-credit convention).
+# Append AI co-author trailers to every commit in this repo unless already
+# present (standard AI-credit conventions: Anthropic + DeepSeek).
 FILE="$1"
 if ! grep -q "Co-authored-by: Claude" "$FILE" 2>/dev/null; then
   printf '\nCo-authored-by: Claude <noreply@anthropic.com>\n' >> "$FILE"
+fi
+if ! grep -q "Co-authored-by: DeepSeek" "$FILE" 2>/dev/null; then
+  printf 'Co-authored-by: DeepSeek <noreply@deepseek.com>\n' >> "$FILE"
 fi
 exit 0

@@ -29,6 +29,8 @@ User --> Harness (OpenCode / Claude Code / Codex / Cursor)
 
 ## Quick Start
 
+**Prerequisites:** Node.js ≥ 20 (npm/npx included) and at least one AI harness you want to wire up (OpenCode, Claude Code, Codex, Cursor, Windsurf — or none yet; GraphyLoop covers that too).
+
 ```bash
 npx graphyloop install
 ```
@@ -294,6 +296,13 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 ---
 
+## What's New
+
+| Version | Highlights |
+|---|---|
+| **0.1.1** | Complete rebrand to the GraphyLoop identity (engine, agents, tool names, config entries) · `graphcrew` agent squad · automatic npm releases via GitHub Actions (tag → test → publish) · copy-paste setup prompt for any AI harness · professional docs, CI matrix (Win/macOS/Linux × Node 20/22/24), AI co-author credits |
+| **0.1.0** | Initial release — one-command install for OpenCode, Claude Code, Codex, Cursor · 24-agent squad · 5-gate workflow · MCP server (8 tools) · persistent memory + swarm engine · zero runtime dependencies |
+
 ## Support
 
 | Resource | Link |
@@ -305,7 +314,12 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 ## Credits
 
-Built with [**Claude**](https://www.anthropic.com/claude) (Anthropic) — AI-assisted engineering across design, implementation, and verification. Commits carry the standard `Co-authored-by: Claude <noreply@anthropic.com>` trailer.
+Built with [**DeepSeek**](https://www.deepseek.com) and [**Claude**](https://www.anthropic.com/claude) (Anthropic) — AI-assisted engineering across design, implementation, and verification. Commits carry the standard co-author trailers:
+
+```
+Co-authored-by: Claude <noreply@anthropic.com>
+Co-authored-by: DeepSeek <noreply@deepseek.com>
+```
 
 ## License
 
