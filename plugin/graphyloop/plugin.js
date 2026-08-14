@@ -15,9 +15,17 @@ import path from 'node:path';
 import { tool } from '@opencode-ai/plugin';
 
 const HOME = os.homedir();
-// CLI location: env override, else the graphyloop core install target.
-const GRAPHYLOOP_CLI = process.env.GRAPHYLOOP_CLI
-  || path.join(HOME, '.graphyloop', 'graphyloop', 'cli.mjs');
+const DEFAULT_CLI = path.join(HOME, '.graphyloop', 'graphyloop', 'cli.mjs');
+// CLI location: env override, else the graphyloop core install target. The
+// override is only trusted when it is absolute, existing, and a .mjs file — a
+// poisoned env (a project .env loaded by the harness) must not be able to make
+// us execute an arbitrary path. Same policy as lib/mcp.mjs.
+function resolveCli() {
+  const env = process.env.GRAPHYLOOP_CLI;
+  if (env && path.isAbsolute(env) && env.endsWith('.mjs') && existsSync(env)) return env;
+  return DEFAULT_CLI;
+}
+const GRAPHYLOOP_CLI = resolveCli();
 const OPENCODE_ROOT = path.join(HOME, '.config', 'opencode');
 const NODE_CANDIDATES = [
   process.env.GRAPHYLOOP_NODE,
@@ -74,10 +82,18 @@ function runCli(args, projectDir) {
     env: { ...process.env, GRAPHYLOOP_PROJECT_ROOT: projectDir },
   });
   if (res.error) return { error: `spawn failed: ${res.error.message}` };
+  // The CLI reports its own failures as {error} on stdout with exit 0, so a
+  // signal or non-zero status means it crashed or hit the 30s timeout — without
+  // these two checks that surfaced as a confusing empty "bad CLI output:".
+  if (res.signal) return { error: `graphyloop CLI killed by signal ${res.signal} (timeout is 30s)` };
+  const out = (res.stdout || '').trim();
+  if (res.status !== 0) {
+    return { error: `graphyloop CLI exited with code ${res.status}: ${out || (res.stderr || '').trim()}` };
+  }
   try {
-    return JSON.parse(res.stdout);
+    return JSON.parse(out);
   } catch {
-    return { error: `bad CLI output: ${(res.stdout || res.stderr || '').slice(0, 300)}` };
+    return { error: `bad CLI output: ${(out || res.stderr || '').slice(0, 300)}` };
   }
 }
 
@@ -233,7 +249,15 @@ export default async (input) => {
       graphyloop_shutdown: tool({
         description: 'Shut down the swarm (terminates agents, keeps memory). Call at session end.',
         args: {},
-        async execute() { return JSON.stringify(runCli(['shutdown'], projectDir)); },
+        async execute() {
+          const res = runCli(['shutdown'], projectDir);
+          // Shutdown flips the state back to uninitialized. Without dropping the
+          // cached init, every later tool call in this session would keep
+          // reporting "not initialized" instead of restarting the swarm.
+          initOk.delete(projectDir);
+          autoInitDone.delete(projectDir);
+          return JSON.stringify(res);
+        },
       }),
     },
   };

@@ -9,7 +9,7 @@
  *   init | status | spawn | distribute | record | memory-store | memory-search | shutdown | cleanup
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, renameSync } from 'fs'
 import { resolve, dirname } from 'path'
 
 // ============================================================================
@@ -19,6 +19,10 @@ import { resolve, dirname } from 'path'
 const CONFIG_DIR = '.opencode/graphyloop'
 const STATE_FILE = `${CONFIG_DIR}/state.json`
 const PROJECT_ROOT = process.env.GRAPHYLOOP_PROJECT_ROOT || process.cwd()
+
+// Memories are append-only and every command rewrites the whole state file, so
+// an uncapped log turns each tool call into a growing read + write.
+const MAX_MEMORIES = Math.max(1, Number(process.env.GRAPHYLOOP_MAX_MEMORIES) || 2000)
 
 const DEFAULT_CAPS = {
   coder: ['code', 'debug', 'implement', 'refactor'],
@@ -31,6 +35,8 @@ const DEFAULT_CAPS = {
   frontend: ['ui', 'layout', 'component', 'style'],
   data: ['schema', 'migration', 'query', 'seed'],
 }
+
+const AGENT_TYPES = Object.keys(DEFAULT_CAPS)
 
 const AGENT_TO_OPENCODE = {
   coder: 'chadi-backend', tester: 'chadi-test', reviewer: 'chadi-reviewer',
@@ -51,21 +57,47 @@ const AGENT_SYSTEM_PROMPTS = {
   data: 'You are a database engineer. Design schemas, migrations, and queries with indexes.',
 }
 
+function freshState() {
+  return {
+    initialized: false, topology: 'hierarchical', maxAgents: 8,
+    agents: [], memories: [], tasksCompleted: 0, tasksFailed: 0, taskQueue: [],
+  }
+}
+
+function stamp() {
+  const d = new Date()
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+}
+
 function loadState() {
   const path = resolve(PROJECT_ROOT, STATE_FILE)
-  if (!existsSync(path)) {
-    return {
-      initialized: false, topology: 'hierarchical', maxAgents: 8,
-      agents: [], memories: [], tasksCompleted: 0, tasksFailed: 0, taskQueue: [],
-    }
+  if (!existsSync(path)) return freshState()
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf-8'))
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('state is not an object')
+    // Spread over the defaults so a state file written by an older version (or
+    // missing a key) cannot crash a command that iterates it.
+    return { ...freshState(), ...parsed }
+  } catch {
+    // A truncated or hand-edited state file would otherwise brick every later
+    // command. Keep it for forensics and continue from a fresh state.
+    try { renameSync(path, `${path}.corrupt-${stamp()}`) } catch { /* best effort */ }
+    return freshState()
   }
-  return JSON.parse(readFileSync(path, 'utf-8'))
 }
 
 function saveState(s) {
   const path = resolve(PROJECT_ROOT, STATE_FILE)
   mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, JSON.stringify(s, null, 2))
+  if (Array.isArray(s.memories) && s.memories.length > MAX_MEMORIES) {
+    s.memories = s.memories.slice(-MAX_MEMORIES)
+  }
+  // tmp + rename: parallel swarm agents share this file, and a crash mid-write
+  // must never leave an unparsable state behind.
+  const tmp = `${path}.tmp-${process.pid}`
+  writeFileSync(tmp, JSON.stringify(s, null, 2))
+  renameSync(tmp, path)
 }
 
 function output(obj) { console.log(JSON.stringify(obj)) }
@@ -91,14 +123,18 @@ function cmdInit() {
     tasksCompleted: 0, tasksFailed: 0, successRate: 1.0, health: 'healthy',
     createdAt: Date.now(), lastActive: Date.now(),
   }]
-  s.memories = [{
+  // Append, never replace: re-initializing after a shutdown used to overwrite
+  // the whole memory log, silently destroying every stored decision/lesson —
+  // the exact thing the store exists to survive.
+  if (!Array.isArray(s.memories)) s.memories = []
+  s.memories.push({
     id: `evt-${Date.now()}`, agentId: 'system',
     content: 'GraphyLoop adapter initialized', type: 'event',
     timestamp: Date.now(),
     metadata: { eventType: 'init', topology: 'hierarchical', maxAgents: 8 },
-  }]
+  })
   saveState(s)
-  output({ ok: true, agents: 1, topology: 'hierarchical' })
+  output({ ok: true, agents: 1, topology: 'hierarchical', memories: s.memories.length })
 }
 
 function cmdStatus() {
@@ -118,8 +154,13 @@ function cmdStatus() {
 function cmdSpawn(type, id, capabilities, role) {
   const s = loadState()
   if (!s.initialized) { output({ error: 'not initialized — run init first' }); return }
+  if (!AGENT_TYPES.includes(type)) {
+    output({ error: `unknown agent type "${type}" (expected one of: ${AGENT_TYPES.join(', ')})` })
+    return
+  }
+  if (id && s.agents.some(a => a.id === id)) { output({ error: `agent id "${id}" already exists` }); return }
   if (s.agents.length >= s.maxAgents) { output({ error: `max agents (${s.maxAgents}) reached` }); return }
-  
+
   const caps = capabilities ? capabilities.split(',') : defaultCaps(type)
   const agent = {
     id: id || `${type}-${Date.now()}`,
@@ -153,7 +194,11 @@ function cmdDistribute(tasksJson, filePath) {
   } else {
     output({ error: 'need --tasks or --file' }); return
   }
-  
+
+  if (!Array.isArray(tasks)) { output({ error: 'tasks must be a JSON array' }); return }
+  const bad = tasks.findIndex(t => !t || typeof t !== 'object' || !t.id)
+  if (bad >= 0) { output({ error: `task at index ${bad} is missing an "id"` }); return }
+
   const activeAgents = s.agents.filter(a => a.status === 'active')
   if (activeAgents.length === 0) { output({ error: 'no active agents' }); return }
   
@@ -202,13 +247,14 @@ function cmdDistribute(tasksJson, filePath) {
 function cmdMemoryStore(agentId, content, type, metadataJson) {
   const s = loadState()
   if (!s.initialized) { output({ error: 'not initialized' }); return }
-  
+  if (!content || !content.trim()) { output({ error: 'need --content' }); return }
+
   let metadata
   if (metadataJson) { try { metadata = JSON.parse(metadataJson) } catch { /* ignore */ } }
   
   s.memories.push({
     id: `mem-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    agentId, content, type: type || 'event',
+    agentId: agentId || 'system', content, type: type || 'event',
     timestamp: Date.now(), metadata,
   })
   saveState(s)
@@ -218,7 +264,10 @@ function cmdMemoryStore(agentId, content, type, metadataJson) {
 function cmdMemorySearch(query, limit) {
   const s = loadState()
   if (!s.initialized) { output({ error: 'not initialized' }); return }
-  
+  // An empty query matches every memory (''.includes is always true), which
+  // would dump the whole store into the agent's context.
+  if (!query || !query.trim()) { output({ error: 'need --query' }); return }
+
   const k = parseInt(limit) || 10
   const terms = query.toLowerCase().split(/\s+/)
   
@@ -253,7 +302,13 @@ function cmdRecordResult(taskId, status, agentId, error) {
   }
   
   saveState(s)
-  output({ ok: true, taskId, status, agentId: agent ? agent.id : undefined })
+  // taskFound/agentFound: a typo'd id used to look identical to a real record,
+  // silently dropping the metrics update.
+  output({
+    ok: true, taskId, status,
+    agentId: agent ? agent.id : undefined,
+    taskFound: !!task, agentFound: !!agent,
+  })
 }
 
 function cmdShutdown() {
@@ -328,9 +383,19 @@ function cmdAsk(prompt, type, model) {
 const args = process.argv.slice(2)
 const command = args[0]
 
+// Accepts both `--flag value` and `--flag=value`. A missing value reads as ''
+// rather than swallowing the next flag, so `--content --type event` reports a
+// missing content instead of storing the literal "--type".
 function getArg(name) {
-  const idx = args.indexOf(`--${name}`)
-  return idx >= 0 && idx + 1 < args.length ? args[idx + 1] : ''
+  const flag = `--${name}`
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith(`${flag}=`)) return args[i].slice(flag.length + 1)
+    if (args[i] === flag) {
+      const next = args[i + 1]
+      return next === undefined || next.startsWith('--') ? '' : next
+    }
+  }
+  return ''
 }
 
 try {

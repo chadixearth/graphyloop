@@ -10,7 +10,7 @@
 
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const MCP_SERVER = join(REPO_ROOT, 'mcp-server.mjs')
 const ADAPTER_CLI = join(REPO_ROOT, 'adapter', 'cli.mjs')
+const PKG_VERSION = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')).version
 
 // The 8 tools the contract mandates.
 const EXPECTED_TOOLS = [
@@ -166,7 +167,7 @@ test('initialize returns protocol version and server info', { timeout: 15000 }, 
   assert.equal(msg.result.protocolVersion, '2024-11-05')
   assert.deepEqual(msg.result.capabilities, { tools: {} })
   assert.equal(msg.result.serverInfo.name, 'graphyloop-mcp')
-  assert.equal(msg.result.serverInfo.version, '0.1.0')
+  assert.equal(msg.result.serverInfo.version, PKG_VERSION, 'serverInfo.version tracks package.json')
 })
 
 test('notifications/initialized produces no response', { timeout: 15000 }, async () => {
@@ -228,6 +229,62 @@ test('tools/call memory_search without query returns isError (validation)', { ti
 test('tools/call memory_store without content returns isError (validation)', { timeout: 15000 }, async () => {
   const result = await callTool('memory_store', { type: 'event' })
   assert.equal(result.isError, true)
+})
+
+// Regression: the contracted tool set has no init tool, so before lazy init a
+// fresh project answered every tool call with {"error":"not initialized"} —
+// graphyloop was inert in claude/codex/cursor until someone ran the CLI by hand.
+test('fresh project auto-initializes on the first tool call', { timeout: 15000 }, async () => {
+  const fresh = mkdtempSync(join(tmpdir(), 'graphyloop-mcp-fresh-'))
+  const s = spawnServer({ GRAPHYLOOP_PROJECT_ROOT: fresh })
+  const r = createLineReader(s.stdout)
+  try {
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'memory_store', arguments: { content: 'auto init' } } })}\n`
+    )
+    const stored = JSON.parse(await r.nextLine(5000))
+    assert.equal(stored.result.isError, false, stored.result.content[0].text)
+    assert.equal(JSON.parse(stored.result.content[0].text).ok, true)
+    assert.ok(
+      existsSync(join(fresh, '.opencode', 'graphyloop', 'state.json')),
+      'state file created under the project root'
+    )
+
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'agent_spawn', arguments: { type: 'coder' } } })}\n`
+    )
+    const spawned = JSON.parse(await r.nextLine(5000))
+    assert.equal(spawned.result.isError, false, spawned.result.content[0].text)
+  } finally {
+    if (s.exitCode === null) {
+      s.kill('SIGTERM')
+      await waitExit(s, 3000).catch(() => {})
+    }
+    rmSync(fresh, { recursive: true, force: true })
+  }
+})
+
+// Auto-init writes <root>/.opencode/graphyloop/state.json, so a client launched
+// with its cwd at HOME must be refused rather than littering the home tree.
+test('home directory is refused as a project root', { timeout: 15000 }, async () => {
+  const fakeHome = mkdtempSync(join(tmpdir(), 'graphyloop-mcp-home-guard-'))
+  const s = spawnServer({ GRAPHYLOOP_HOME: fakeHome, GRAPHYLOOP_PROJECT_ROOT: fakeHome })
+  const r = createLineReader(s.stdout)
+  try {
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'memory_store', arguments: { content: 'should not persist' } } })}\n`
+    )
+    const res = JSON.parse(await r.nextLine(5000))
+    assert.equal(res.result.isError, true)
+    assert.match(res.result.content[0].text, /not a project root/)
+    assert.ok(!existsSync(join(fakeHome, '.opencode')), 'home directory left untouched')
+  } finally {
+    if (s.exitCode === null) {
+      s.kill('SIGTERM')
+      await waitExit(s, 3000).catch(() => {})
+    }
+    rmSync(fakeHome, { recursive: true, force: true })
+  }
 })
 
 test('tools/call shutdown exits the process with code 0', { timeout: 15000 }, async () => {

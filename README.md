@@ -158,6 +158,8 @@ Once installed, any MCP-capable harness can call:
 | `memory_search` | Keyword-search stored memories |
 | `shutdown` | Gracefully stop the swarm |
 
+The swarm **initializes itself on the first tool call** — no setup step, no init tool to remember. Memory persists across `shutdown` and across sessions; only the agent roster is reset. State is written to `<project>/.opencode/graphyloop/state.json`, and the engine refuses to run in a home, system, or harness-config directory so it never litters those trees.
+
 Verify the connection any time:
 
 ```bash
@@ -274,7 +276,7 @@ Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and t
 ## Development
 
 ```bash
-npm test          # 19 tests: MCP protocol E2E + installer preservation/idempotency + uninstall round-trip
+npm test          # 34 tests: MCP protocol E2E + engine state durability + installer preservation/idempotency + uninstall round-trip
 npm pack          # build the publishable tarball
 ```
 
@@ -300,6 +302,7 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 | Version | Highlights |
 |---|---|
+| **0.1.2** | **Fix: MCP tools worked only after a manual init** — the swarm now initializes lazily on the first tool call, so Claude Code / Codex / Cursor work in a fresh project out of the box · **Fix: re-init after `shutdown` erased the whole memory log** · project-root guard extended to the MCP server (no more writes into home/system dirs) · crash-safe atomic state writes, corrupt-state recovery, capped memory log · engine input validation (`--flag=value`, unknown agent types, duplicate ids, empty queries) · plugin surfaces CLI crashes/timeouts instead of swallowing them · 15 new tests (34 total) |
 | **0.1.1** | Complete rebrand to the GraphyLoop identity (engine, agents, tool names, config entries) · `graphcrew` agent squad · automatic npm releases via GitHub Actions (tag → test → publish) · copy-paste setup prompt for any AI harness · professional docs, CI matrix (Win/macOS/Linux × Node 20/22/24), AI co-author credits |
 | **0.1.0** | Initial release — one-command install for OpenCode, Claude Code, Codex, Cursor · 24-agent squad · 5-gate workflow · MCP server (8 tools) · persistent memory + swarm engine · zero runtime dependencies |
 
