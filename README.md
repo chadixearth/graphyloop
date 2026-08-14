@@ -1,100 +1,128 @@
+<div align="center">
+
+[![GraphyLoop](https://img.shields.io/badge/_GraphyLoop-any%20harness-6366f1?style=for-the-badge)](https://github.com/chadixearth/graphyloop)
+[![npm version](https://img.shields.io/npm/v/graphyloop?label=npx%20graphyloop&style=for-the-badge&logo=npm&color=cb3837)](https://www.npmjs.com/package/graphyloop)
+[![CI — Win/macOS/Linux × Node 20/22/24](https://github.com/chadixearth/graphyloop/actions/workflows/ci.yml/badge.svg)](https://github.com/chadixearth/graphyloop/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
 # GraphyLoop
 
-[![npm version](https://img.shields.io/npm/v/graphyloop)](https://www.npmjs.com/package/graphyloop)
-[![CI](https://github.com/chadixearth/graphyloop/actions/workflows/ci.yml/badge.svg)](https://github.com/chadixearth/graphyloop/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+**An agentic workflow kit for any AI coding harness.**
 
-**One command. A full agentic workflow for any AI coding harness.**
+</div>
 
-GraphyLoop installs everything you need for agent-driven development in one shot:
+> **Agent = Model + Harness.** The model thinks; the harness gives it tools, memory, loops, and discipline so it can actually work. **GraphyLoop is the harness layer** — one command wires any AI coding harness with a 24-agent squad, coordinated swarms, persistent memory that survives restarts, and a 5-gate delivery workflow. You keep writing code. GraphyLoop handles coordination.
 
-- **graphyloop swarm + memory engine** — zero-config agent orchestration and persistent memory that survive restarts. No API keys required.
-- **24-agent chadi/graphcrew squad** — explorer, backend, frontend, test, security, reviewer, and more, with a 5-gate delivery workflow.
-- **MCP server** — the universal bridge: **Claude Code, Codex, Cursor, Windsurf, OpenCode** all get the graphyloop tools over the Model Context Protocol.
-- **5-gate workflow rules** (AGENTS.md) — classify → discover → implement → verify → report, installed for every harness.
+```
+User --> Harness (OpenCode / Claude Code / Codex / Cursor)
+              |
+              +---- MCP server ----+---- graphyloop engine (swarm + memory)
+              |                    +---- squad agents (24 chadi/graphcrew)
+              |                    +---- 5-gate workflow rules (AGENTS.md)
+              v
+         ~/.graphyloop core (cli.mjs · plugin.js · mcp-server.mjs)
+```
 
-Works on **Windows, macOS, Linux** and **Node.js 20, 22, 24** — verified in CI on every push.
+> **New here?** You don't need to learn anything before installing. Run `npx graphyloop install`, restart your harness, open a real project, and ask your agent to run `/chadi-init`. The workflow takes over from there.
 
 ---
 
-## Quick start (60 seconds)
+## Quick Start
 
 ```bash
 npx graphyloop install
 ```
 
-That's it. GraphyLoop detects which harnesses you have (OpenCode, Claude Code, Codex, Cursor) and wires up each one:
+GraphyLoop detects which harnesses you have and wires each one. Then:
 
 1. **Restart your harness** (close and reopen your terminal / editor).
 2. **Open a real project** (not your home directory).
 3. **Ask your agent to run `/chadi-init`** — the workflow initializes.
 
-> Fresh machine with no harness configs yet? `npx graphyloop install` installs all four automatically so you are ready either way. Use `--harness <name>` to target one, or `--harness all` to force all four.
+| Install path | What you get | Files in your workspace |
+|---|---|---|
+| `npx graphyloop install` | Everything, for every harness detected | **Zero** — everything lives in your home config (`~/.graphyloop/`, `~/.config/opencode/`, `~/.claude/`, `~/.codex/`, `~/.cursor/`) |
+| `npx graphyloop install --harness opencode` | One harness only | Zero |
+| `git clone` + `node setup.mjs` | OpenCode-only, no npm needed | Zero (repo clone aside) |
+
+> **Fresh machine?** No harness configs yet → GraphyLoop installs all four automatically, so you are ready no matter which harness you open next. `--harness all` forces all four; `--harness <name>` targets one.
 
 ### What you get
 
 | Harness | Agents | Commands | Rules | Tools |
 |---|---|---|---|---|
-| OpenCode | 25 agents in `~/.config/opencode/agents/` | 12 `/chadi-*` commands | AGENTS.md | graphyloop plugin (`graphyloop_*` tools) |
-| Claude Code | 25 agents in `~/.claude/agents/` | 12 `/chadi-*` commands | AGENTS.md | MCP server |
-| Codex | prompts in `~/.codex/prompts/` | 12 prompts | AGENTS.md | MCP server |
-| Cursor / Windsurf | — | — | AGENTS.md | MCP server |
+| **OpenCode** | 25 agent files | 12 `/chadi-*` commands | AGENTS.md | graphyloop plugin (`graphyloop_*` tools) |
+| **Claude Code** | 25 agent files | 12 `/chadi-*` commands | AGENTS.md | MCP server (`√ Connected`) |
+| **Codex** | 12 prompts | 12 prompts | AGENTS.md | MCP server (`enabled`) |
+| **Cursor / Windsurf** | — | — | AGENTS.md | MCP server |
 
-The core engine lives in `~/.graphyloop/` (adapter CLI + plugin + MCP server).
-
-### Install via git (no npm)
-
-```bash
-git clone https://github.com/chadixearth/graphyloop.git
-cd graphyloop
-node setup.mjs          # equivalent to: npx graphyloop install --harness opencode
-```
+Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a real install + MCP handshake smoke on every combination.
 
 ---
 
-## CLI reference
+## What You Get
 
-```
-npx graphyloop install [--harness opencode|claude|codex|cursor|all]
-                       [--force] [--skip-agents] [--skip-workflow]
-                       [--no-config-merge] [--config-dir DIR] [--graphyloop-dir DIR]
-npx graphyloop doctor              # what's detected on this machine
-npx graphyloop status [--json]     # swarm status via the graphyloop engine
-npx graphyloop uninstall           # remove only what graphyloop added
-npx graphyloop mcp                 # run the MCP server directly (stdio)
-```
-
-Flags:
-
-| Flag | Meaning |
+| Capability | Description |
 |---|---|
-| `--harness` | `opencode` / `claude` / `codex` / `cursor` / `all`. Default: every detected harness. |
-| `--home DIR` | Install into a different home directory (testing, containers). |
-| `--force` | Overwrite existing graphyloop files (previous copies are backed up as `*.bak-<timestamp>`). |
-| `--skip-agents` / `--skip-workflow` | Skip agents/prompts or AGENTS.md. |
-| `--no-config-merge` | Never touch `opencode.json`, `.claude.json`, `config.toml`, `mcp.json`. |
+| 🐝 **Swarm orchestration** | Spawn, distribute, and track agents with a hierarchical swarm topology — zero API keys, state in `<project>/.opencode/graphyloop/state.json` |
+| 🧠 **Persistent memory** | Store decisions, patterns, lessons, and events; keyword-search across sessions. Survives restarts and compactions |
+| 🤖 **24-agent squad** | Specialized agents for exploration, backend, frontend, testing, security, review, refactoring, docs, data, performance, and more (see [Squad](#squad-agents)) |
+| 🛡️ **5-gate delivery workflow** | Classify → Discover → Implement → Verify → Report, with lane-based verification and evidence-first reporting |
+| 🔌 **Universal MCP bridge** | The same graphyloop tools work in Claude Code, Codex, Cursor, Windsurf, OpenCode — any MCP-capable harness |
+| 📋 **12 slash commands** | `chadi-init` · `chadi-fast` · `chadi-review` · `chadi-plan` · `chadi-audit` · `chadi-release` · `chadi-research` · `chadi-confusing` · `chadi-discuss` · `chadi-go` · `chadi-recall` · `chadi-skills` |
+| 🔒 **Config safety** | Timestamped backups before every write, never overwrites your config keys, idempotent re-runs, uninstall removes only byte-identical copies |
+| ⚡ **Zero dependencies** | Pure Node (≥ 20), no npm packages at runtime, no shell scripts — installs the same on every platform |
 
-**Safety guarantees** (all verified by tests):
+<details>
+<summary><strong>With vs Without</strong></summary>
 
-- Never overwrites your existing config keys — plugin lists, commands, MCP servers, `default_agent`, models are preserved exactly.
-- Every write is preceded by a timestamped backup.
-- Re-running is always safe (idempotent).
-- Uninstall removes **only** files byte-identical to the shipped copies — anything you edited is left alone.
+| Capability | Harness Alone | + GraphyLoop |
+|---|---|---|
+| Agent collaboration | Isolated sessions | Swarm with shared memory |
+| Orchestration | Manual | 5-gate workflow + dedicated squad agents |
+| Memory | Session-only | Persistent, searchable, survives restarts |
+| Multi-harness | One tool | Same workflow in OpenCode, Claude Code, Codex, Cursor |
+| Delivery discipline | Ad hoc | Lane-gated verification (test → security → review) |
+| Safety | — | Backup-first config merges, content-matched uninstall |
+
+</details>
+
+<details>
+<summary><strong>Architecture overview</strong></summary>
+
+```
+User --> Harness (OpenCode / Claude Code / Codex / Cursor / Windsurf)
+              |
+              v
+        MCP bridge (8 graphyloop tools)  <----  OpenCode plugin (graphyloop_* tools)
+              |
+              v
+        graphyloop engine (adapter/cli.mjs)
+        (swarm orchestration + persistent memory, JSON state)
+              |
+              +-----> 24-agent squad (explorer, backend, frontend,
+              |        test, security, reviewer, architect, ...)
+              |
+              v
+        workflow/AGENTS.md (5-gate rules, installed per harness)
+```
+
+</details>
 
 ---
 
-## MCP tools (available in every harness)
+## MCP Tools
 
 Once installed, any MCP-capable harness can call:
 
 | Tool | Purpose |
 |---|---|
-| `agent_spawn` | Spawn a swarm agent (`coder`, `tester`, `reviewer`, `architect`, `explorer`, `security`, `coordinator`, `frontend`, `data`) |
+| `agent_spawn` | Spawn a swarm agent — `coder`, `tester`, `reviewer`, `architect`, `explorer`, `security`, `coordinator`, `frontend`, `data` |
 | `agent_list` | List swarm agents |
 | `task_distribute` | Distribute tasks across the swarm (JSON array of `{id, type, description, priority}`) |
 | `task_record` | Record a task result (updates agent metrics) |
 | `swarm_state` | Swarm status + memory count |
-| `memory_store` | Persist a memory entry (`decision`, `pattern`, `lesson`, `event`, `task`) |
+| `memory_store` | Persist a memory entry — `decision`, `pattern`, `lesson`, `event`, `task` |
 | `memory_search` | Keyword-search stored memories |
 | `shutdown` | Gracefully stop the swarm |
 
@@ -107,21 +135,58 @@ codex mcp list       # look for: graphyloop ... enabled
 
 ---
 
-## The 5-gate workflow
+## Squad Agents
 
-GraphyLoop's rules (installed as AGENTS.md) drive every task through five gates:
+| Role | Agents |
+|---|---|
+| **Conductor** | `agent-chadi` — the primary agent running the 5-gate workflow |
+| **Exploration** | `chadi-explorer` · `graphcrew-investigator` |
+| **Implementation** | `chadi-backend` · `chadi-frontend` · `graphcrew-builder` · `graphcrew-fixer` · `chadi-refactor` |
+| **Verification** | `chadi-test` · `chadi-quality` · `chadi-reviewer` · `graphcrew-reviewer` |
+| **Security** | `chadi-security` |
+| **Architecture & Planning** | `chadi-architect` · `chadi-think` · `chadi-council` |
+| **Data & DevOps** | `chadi-data` · `chadi-devops` |
+| **Docs & Media** | `chadi-docs` · `chadi-vision` · `story-video-automator` |
+| **Memory & Meta** | `chadi-memory` · `chadi-agent-writer` · `chadi-performance` |
+
+## The 5-Gate Workflow
 
 1. **Classify & route** — trivial → inline fix; standard → squad; heavy → full review loop.
 2. **Discovery + dispatch** — parallel exploration, memory recall, contract freeze before coding.
 3. **Implement + autofix** — flash workers, exclusive file ownership, 3-tier error recovery.
 4. **Verify (batched)** — tests + lint + security + review in one parallel wave.
-5. **Report** — evidence-first summary, workflow metrics.
+5. **Report** — evidence-first summary with workflow metrics.
 
-Plus: internal-decision policy (no bouncing reversible decisions), shell discipline for hang-free automation, MCP budget, and RAM-aware parallel-agent caps.
+Plus: an internal-decision policy (no bouncing reversible decisions back), shell discipline for hang-free automation, and RAM-aware parallel-agent caps.
 
-## Slash commands
+---
 
-`chadi-init` · `chadi-fast` · `chadi-review` · `chadi-plan` · `chadi-audit` · `chadi-release` · `chadi-research` · `chadi-confusing` · `chadi-discuss` · `chadi-go` · `chadi-recall` · `chadi-skills`
+## CLI Reference
+
+```
+npx graphyloop install [--harness opencode|claude|codex|cursor|all]
+                       [--force] [--skip-agents] [--skip-workflow]
+                       [--no-config-merge] [--config-dir DIR] [--graphyloop-dir DIR]
+npx graphyloop doctor              # what's detected on this machine
+npx graphyloop status [--json]     # swarm status via the graphyloop engine
+npx graphyloop uninstall           # remove only what graphyloop added
+npx graphyloop mcp                 # run the MCP server directly (stdio)
+```
+
+| Flag | Meaning |
+|---|---|
+| `--harness` | `opencode` / `claude` / `codex` / `cursor` / `all` — default: every detected harness |
+| `--home DIR` | Install into a different home directory (testing, containers) |
+| `--force` | Overwrite existing graphyloop files (previous copies backed up as `*.bak-<timestamp>`) |
+| `--skip-agents` / `--skip-workflow` | Skip agents/prompts or AGENTS.md |
+| `--no-config-merge` | Never touch `opencode.json`, `.claude.json`, `config.toml`, `mcp.json` |
+
+**Safety guarantees** (all covered by tests):
+
+- Never overwrites your existing config keys — plugin lists, commands, MCP servers, `default_agent`, models preserved exactly.
+- Every write is preceded by a timestamped backup.
+- Re-running is always safe (idempotent).
+- Uninstall removes **only** files byte-identical to the shipped copies — anything you edited is left alone.
 
 ---
 
@@ -145,10 +210,10 @@ model: <your-model>
 ## Updates
 
 ```bash
-npx graphyloop@latest install --force   # refresh core + agents (backups kept)
+npx -y graphyloop@latest install --force   # refresh core + agents from the newest version (backups kept)
 ```
 
-Or simply re-run `npx graphyloop install` — it is idempotent and never clobbers your config.
+Re-running plain `npx graphyloop install` is always safe — idempotent, never clobbers your config.
 
 ## Uninstall
 
@@ -164,38 +229,46 @@ Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and t
 
 | Symptom | Fix |
 |---|---|
-| `graphyloop CLI not found at ...` from an MCP tool | Run `npx graphyloop install` — the core engine is missing. |
-| "graphyloop skipped: not a project root" | Open a real project. The engine deliberately refuses home/system directories. |
-| MCP server not showing in Claude Code | `claude mcp list`; if missing, re-run install and restart Claude Code. |
-| Codex does not load the server | Check `~/.codex/config.toml` has `[mcp_servers.graphyloop]`; restart codex. |
-| Re-running setup "skips" files | Normal — that is the preserve-your-config behavior. Use `--force` to refresh (backups are made first). |
-| Config merge warnings about `opencode.jsonc` | OpenCode gives `.jsonc` precedence; review it for the plugin/commands keys. |
-| I edited an agent and uninstall kept it | Intended — uninstall only removes byte-identical copies. |
+| `graphyloop CLI not found at ...` from an MCP tool | Run `npx graphyloop install` — the core engine is missing |
+| "graphyloop skipped: not a project root" | Open a real project — the engine deliberately refuses home/system directories |
+| MCP server not showing in Claude Code | `claude mcp list`; if missing, re-run install and restart Claude Code |
+| Codex does not load the server | Check `~/.codex/config.toml` has `[mcp_servers.graphyloop]`; restart codex |
+| Re-running setup "skips" files | Normal — that is the preserve-your-config behavior. Use `--force` to refresh (backups are made first) |
+| Config merge warnings about `opencode.jsonc` | OpenCode gives `.jsonc` precedence; review it for the plugin/commands keys |
+| I edited an agent and uninstall kept it | Intended — uninstall only removes byte-identical copies |
 
 ---
 
 ## Development
 
 ```bash
-npm test          # 19 tests: MCP protocol E2E + installer preservation/idempotency
+npm test          # 19 tests: MCP protocol E2E + installer preservation/idempotency + uninstall round-trip
 npm pack          # build the publishable tarball
 ```
 
-Structure: `bin/` CLI entry · `lib/` installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files. CI runs the full matrix (Windows/macOS/Linux × Node 20/22/24) on every push, including a real install + MCP handshake smoke.
+**Structure:** `bin/` CLI entry · `lib/` installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files · `scripts/` test runner + CI smoke.
 
-### Releasing a new version
+**CI** runs the full matrix (Windows/macOS/Linux × Node 20/22/24) on every push: syntax, tests, fresh-sandbox installer smoke, installed-MCP-server handshake, tarball contents.
 
-**Automatic** — GitHub Actions publishes for you:
+### Releasing (automatic)
 
 ```bash
 npm test                          # 1. verify locally
 npm version patch                 # 2. bump (patch | minor | major) — creates a v* tag
-git push && git push --tags       # 3. CI tests + Actions publishes to npm automatically
+git push && git push --tags       # 3. GitHub Actions tests + publishes to npm automatically
 ```
 
-One-time setup: add an npm **granular access token** (npmjs.com → Access Tokens → granular, scope: graphyloop, read+write) as a GitHub Actions secret named `NPM_TOKEN` (repo → Settings → Secrets and variables → Actions).
+One-time setup: add an npm granular access token (scope: graphyloop, read+write) as a GitHub Actions secret named `NPM_TOKEN`. If the token cannot bypass 2FA, fall back to the *Run workflow* action with your current npm one-time password in the `otp` input; `dry_run=true` validates the pipeline without shipping. Users update with `npx -y graphyloop@latest install --force`.
 
-If the token cannot bypass 2FA (npm is restricting those), fall back: GitHub → Actions → **Publish** → *Run workflow* → paste the current npm one-time password into `otp`. Preview the pipeline any time with `dry_run=true`. Users update with `npx -y graphyloop@latest install --force`.
+---
+
+## Support
+
+| Resource | Link |
+|---|---|
+| Source & issues | [github.com/chadixearth/graphyloop](https://github.com/chadixearth/graphyloop) |
+| Package | [npmjs.com/package/graphyloop](https://www.npmjs.com/package/graphyloop) |
+| Install | `npx graphyloop install` |
 
 ## License
 
