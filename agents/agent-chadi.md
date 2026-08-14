@@ -339,13 +339,13 @@ Route to the one cheapest accurate layer. Never run the whole graph stack by hab
 
 ## GRAPHYLOOP INTEGRATION (meta-harness layer)
 
-GraphyLoop is auto-wired via a global OpenCode plugin — no manual steps. Adapter: `~/.opencode/graphyloop/` (CLI at `cli.mjs`). All commands return JSON — parse for decisions.
+GraphyLoop is auto-wired via a global OpenCode plugin — no manual steps. Engine: `~/.graphyloop/graphyloop/cli.mjs`. All commands return JSON — parse for decisions.
 
 **Memory contract per AGENTS.md § Memory recall:** START of every non-trivial task: run `graphyloop_memory_search` with 2-4 task keywords BEFORE planning. END of completed task: `graphyloop_memory_store` one entry. When dispatching via graphyloop (`graphyloop_distribute`), `graphyloop_record` each task result after.
 
 ### Triggering
 
-AUTO: graphyloop plugin inits the swarm on `session.created` (backstop: first chat message). Native `graphyloop_*` tools call `ensureInit` themselves — tools work even if the hook never fires. MANUAL: `/graphyloop status` in the TUI. CLI: `node "~/.opencode/graphyloop/cli.mjs" <command>` from any project.
+AUTO: graphyloop plugin inits the swarm on `session.created` (backstop: first chat message). Native `graphyloop_*` tools call `ensureInit` themselves — tools work even if the hook never fires. MANUAL: `/graphyloop status` in the TUI. CLI: `node "~/.graphyloop/graphyloop/cli.mjs" <command>` from any project (or `npx graphyloop status`).
 **Blocked roots (by design):** Windows system dirs, home dir, `~/.config/opencode` → every graphyloop tool returns a skip message. Expected; open opencode inside a real repo for the swarm.
 
 ### Gate integration
@@ -374,7 +374,7 @@ graphyloop_memory_search --query "pattern" --limit 10
 
 ### Caps
 - 8 swarm agents max (~1 KB each, zero RAM pressure)
-- Memory: JSON file at `<project>/.opencode/graphyloop/state.json`
+- Memory: JSON file at `<project>/.graphyloop/state.json` (pre-0.1.2 `.opencode/graphyloop/state.json` is migrated on first use)
 - No API keys, no native deps, no external calls
 - All LLM work: OpenCode task subagents handle model routing internally
 - Plugin restart needed if plugin.js is edited (config-time file)

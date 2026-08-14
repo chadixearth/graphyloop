@@ -246,7 +246,7 @@ test('fresh project auto-initializes on the first tool call', { timeout: 15000 }
     assert.equal(stored.result.isError, false, stored.result.content[0].text)
     assert.equal(JSON.parse(stored.result.content[0].text).ok, true)
     assert.ok(
-      existsSync(join(fresh, '.opencode', 'graphyloop', 'state.json')),
+      existsSync(join(fresh, '.graphyloop', 'state.json')),
       'state file created under the project root'
     )
 
@@ -264,8 +264,8 @@ test('fresh project auto-initializes on the first tool call', { timeout: 15000 }
   }
 })
 
-// Auto-init writes <root>/.opencode/graphyloop/state.json, so a client launched
-// with its cwd at HOME must be refused rather than littering the home tree.
+// Auto-init writes <root>/.graphyloop/state.json, so a client launched with its
+// cwd at HOME must be refused rather than littering the home tree.
 test('home directory is refused as a project root', { timeout: 15000 }, async () => {
   const fakeHome = mkdtempSync(join(tmpdir(), 'graphyloop-mcp-home-guard-'))
   const s = spawnServer({ GRAPHYLOOP_HOME: fakeHome, GRAPHYLOOP_PROJECT_ROOT: fakeHome })
@@ -277,7 +277,7 @@ test('home directory is refused as a project root', { timeout: 15000 }, async ()
     const res = JSON.parse(await r.nextLine(5000))
     assert.equal(res.result.isError, true)
     assert.match(res.result.content[0].text, /not a project root/)
-    assert.ok(!existsSync(join(fakeHome, '.opencode')), 'home directory left untouched')
+    assert.ok(!existsSync(join(fakeHome, '.graphyloop')), 'home directory left untouched')
   } finally {
     if (s.exitCode === null) {
       s.kill('SIGTERM')

@@ -1,9 +1,9 @@
 // adapter.test.mjs — graphyloop engine tests (adapter/cli.mjs).
 //
-// The engine owns <project>/.opencode/graphyloop/state.json: every harness path
-// (OpenCode plugin, MCP server, bare CLI) funnels through it, so its failure
-// modes are everyone's failure modes. Each test drives the real CLI via
-// spawnSync against a throwaway project root.
+// The engine owns <project>/.graphyloop/state.json: every harness path (OpenCode
+// plugin, MCP server, bare CLI) funnels through it, so its failure modes are
+// everyone's failure modes. Each test drives the real CLI via spawnSync against
+// a throwaway project root.
 //
 // No network, no npm deps. Run with: node scripts/run-tests.mjs
 
@@ -12,7 +12,7 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -22,6 +22,10 @@ const projects = []
 let project
 
 function stateFile(root = project) {
+  return join(root, '.graphyloop', 'state.json')
+}
+
+function legacyStateFile(root = project) {
   return join(root, '.opencode', 'graphyloop', 'state.json')
 }
 
@@ -83,6 +87,89 @@ test('state written by an older version keeps working', () => {
   const status = cli(['status'])
   assert.equal(status.initialized, true)
   assert.equal(status.pendingTasks, 0)
+})
+
+// ---------------------------------------------------------------------------
+// Legacy state migration (pre-0.1.2 lived under .opencode/graphyloop/)
+// ---------------------------------------------------------------------------
+
+test('a pre-0.1.2 state file is migrated, memories intact', () => {
+  const legacy = {
+    initialized: true, topology: 'hierarchical', maxAgents: 8,
+    agents: [{ id: 'swarm-leader', type: 'coordinator', status: 'active', role: 'leader' }],
+    memories: [{ id: 'mem-legacy', agentId: 'system', content: 'decision from the old path', type: 'decision', timestamp: 1 }],
+    tasksCompleted: 3, tasksFailed: 1, taskQueue: [],
+  }
+  mkdirSync(dirname(legacyStateFile()), { recursive: true })
+  writeFileSync(legacyStateFile(), JSON.stringify(legacy))
+
+  const status = cli(['status'])
+  assert.equal(status.initialized, true, 'migrated state is still initialized')
+  assert.equal(status.tasksCompleted, 3, 'counters carried over')
+  assert.equal(status.stateFile, stateFile(), 'status reports the new location')
+
+  assert.ok(existsSync(stateFile()), 'state moved to .graphyloop/')
+  assert.ok(!existsSync(legacyStateFile()), 'legacy file removed — no split brain')
+
+  const found = cli(['memory-search', '--query', 'decision'])
+  assert.ok(found.results.some((m) => m.id === 'mem-legacy'), 'legacy memories survived the move')
+})
+
+test('migration never overwrites an existing new-location state', () => {
+  cli(['init'])
+  cli(['memory-store', '--content', 'current state'])
+  mkdirSync(dirname(legacyStateFile()), { recursive: true })
+  writeFileSync(legacyStateFile(), JSON.stringify({ initialized: true, memories: [], agents: [] }))
+
+  const found = cli(['memory-search', '--query', 'current'])
+  assert.ok(found.results.some((m) => m.content === 'current state'), 'live state untouched')
+  assert.ok(existsSync(legacyStateFile()), 'stale legacy file left alone')
+})
+
+// ---------------------------------------------------------------------------
+// Concurrency
+// ---------------------------------------------------------------------------
+
+test('concurrent writers do not lose updates', async () => {
+  const WRITERS = 12
+  const SEEDED = 1800 // realistic store, still under the default 2000 cap
+
+  // Every command is load → mutate → save, so without the lock the writers race
+  // and the last save wins. The window scales with state size: at this seed the
+  // unlocked engine measurably drops about half the writes.
+  mkdirSync(dirname(stateFile()), { recursive: true })
+  writeFileSync(stateFile(), JSON.stringify({
+    initialized: true, topology: 'hierarchical', maxAgents: 8, agents: [],
+    memories: Array.from({ length: SEEDED }, (_, i) => ({
+      id: `seed-${i}`, agentId: 'system', content: `seed ${i} ${' '.repeat(40)}`, type: 'event', timestamp: i,
+    })),
+    tasksCompleted: 0, tasksFailed: 0, taskQueue: [],
+  }))
+
+  await Promise.all(
+    Array.from({ length: WRITERS }, (_, i) => new Promise((done, fail) => {
+      const child = spawn(process.execPath, [CLI, 'memory-store', '--content', `parallel-${i}`], {
+        env: { ...process.env, GRAPHYLOOP_PROJECT_ROOT: project },
+        stdio: 'ignore',
+      })
+      child.on('error', fail)
+      child.on('exit', (code) => (code === 0 ? done() : fail(new Error(`writer ${i} exited ${code}`))))
+    }))
+  )
+
+  const state = JSON.parse(readFileSync(stateFile(), 'utf8'))
+  const stored = state.memories.filter((m) => m.content.startsWith('parallel-')).map((m) => m.content).sort()
+  assert.equal(stored.length, WRITERS, `every write persisted, got: ${stored}`)
+  assert.ok(!existsSync(`${stateFile()}.lock`), 'lock released')
+})
+
+test('a stale lock does not wedge the engine forever', () => {
+  cli(['init'])
+  // A lock left behind by a killed process: fresh enough to still be held, so
+  // the short timeout must report rather than hang.
+  mkdirSync(`${stateFile()}.lock`, { recursive: true })
+  const res = cli(['memory-store', '--content', 'blocked'], { GRAPHYLOOP_LOCK_TIMEOUT_MS: '150' })
+  assert.match(res.error, /timed out .* waiting for the graphyloop state lock/)
 })
 
 test('saves are atomic — no temp files survive a command', () => {

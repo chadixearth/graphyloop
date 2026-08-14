@@ -5,7 +5,7 @@
 // remembering shell commands. Also auto-initializes the swarm on
 // session start.
 //
-// No API keys. All state lives in <project>/.opencode/graphyloop/state.json.
+// No API keys. All state lives in <project>/.graphyloop/state.json.
 // LLM work is still done by OpenCode task subagents; this only coordinates.
 
 import { existsSync } from 'node:fs';
@@ -59,7 +59,7 @@ function isInside(root, parent) {
   return normalizedRoot === normalizedParent || normalizedRoot.startsWith(`${normalizedParent}${path.sep}`);
 }
 
-// Mirrors repo-index-init's guard. The CLI writes <root>/.opencode/graphyloop/state.json,
+// Mirrors repo-index-init's guard. The CLI writes <root>/.graphyloop/state.json,
 // so an unguarded auto-init litters the home directory and the opencode config tree,
 // and fails silently under Windows system dirs where the write is denied.
 function isBlockedRoot(root) {
@@ -188,6 +188,8 @@ export default async (input) => {
           let parsed;
           try { parsed = JSON.parse(args.tasks); }
           catch { return JSON.stringify({ error: 'tasks must be valid JSON array string' }); }
+          if (!Array.isArray(parsed)) return JSON.stringify({ error: 'tasks must be a JSON array' });
+          if (parsed.length === 0) return JSON.stringify({ error: 'tasks array is empty' });
           const res = ensureInit(projectDir);
           const dist = runCli(['distribute', '--tasks', args.tasks], projectDir);
           return JSON.stringify({ init: res, assignments: dist.assignments || dist }, null, 2);

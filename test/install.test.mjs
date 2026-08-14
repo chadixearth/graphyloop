@@ -30,8 +30,12 @@ import { fileURLToPath } from 'node:url'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const BIN = join(REPO_ROOT, 'bin', 'graphyloop.mjs')
 
-const AGENT_COUNT = 25 // agents/*.md in repo (contract: agents dir populated)
-const COMMAND_COUNT = 12 // chadi-* commands (config/opencode.commands.json)
+// Derived from the repo, not hardcoded: adding an agent or a command should not
+// require editing this file, but a *dropped* one still fails the assertions.
+const AGENT_COUNT = readdirSync(join(REPO_ROOT, 'agents')).filter((f) => f.endsWith('.md')).length
+const COMMAND_COUNT = Object.keys(
+  JSON.parse(readFileSync(join(REPO_ROOT, 'config', 'opencode.commands.json'), 'utf8'))
+).filter((k) => k.startsWith('chadi-')).length
 
 let sandbox
 
