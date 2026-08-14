@@ -6,6 +6,9 @@ name: Publish
 #   - push a v* tag: run the test gate, then publish only if the NPM_TOKEN
 #     secret exists (token presence is checked in a step, since env/secrets
 #     contexts are not available in step-level `if` conditions)
+#   - npm publish is skipped when the version already exists on the registry
+#     (idempotent re-runs: a manual publish or a re-pushed tag must not fail
+#     the workflow with an E409 conflict)
 
 on:
   push:
@@ -57,13 +60,25 @@ jobs:
 
       - name: Publish to npm (token)
         if: ${{ github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) && steps.tokencheck.outputs.present == 'yes' }}
-        run: npm publish
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          if npm view "graphyloop@$PKG" version >/dev/null 2>&1; then
+            echo "VERSION_EXISTS: graphyloop@$PKG is already on the registry, skipping publish"
+            exit 0
+          fi
+          npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm (OTP)
         if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.otp != '' && github.event.inputs.otp != null }}
-        run: npm publish --otp "${{ github.event.inputs.otp }}"
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          if npm view "graphyloop@$PKG" version >/dev/null 2>&1; then
+            echo "VERSION_EXISTS: graphyloop@$PKG is already on the registry, skipping publish"
+            exit 0
+          fi
+          npm publish --otp "${{ github.event.inputs.otp }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
