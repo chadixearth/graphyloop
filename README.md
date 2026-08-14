@@ -185,14 +185,17 @@ Structure: `bin/` CLI entry · `lib/` installers + MCP server + detection · `pl
 
 ### Releasing a new version
 
+**Automatic** — GitHub Actions publishes for you:
+
 ```bash
 npm test                          # 1. verify locally
-npm version patch                 # 2. bump (patch | minor | major) — creates a git tag
-npm publish                       # 3. ship (2FA prompt) — never re-publish the same version
-git push && git push --tags       # 4. push code + tag; CI re-verifies the full matrix
+npm version patch                 # 2. bump (patch | minor | major) — creates a v* tag
+git push && git push --tags       # 3. CI tests + Actions publishes to npm automatically
 ```
 
-Preview first: `npm publish --dry-run`. Users update with `npx -y graphyloop@latest install --force`.
+One-time setup: add an npm **granular access token** (npmjs.com → Access Tokens → granular, scope: graphyloop, read+write) as a GitHub Actions secret named `NPM_TOKEN` (repo → Settings → Secrets and variables → Actions).
+
+If the token cannot bypass 2FA (npm is restricting those), fall back: GitHub → Actions → **Publish** → *Run workflow* → paste the current npm one-time password into `otp`. Preview the pipeline any time with `dry_run=true`. Users update with `npx -y graphyloop@latest install --force`.
 
 ## License
 

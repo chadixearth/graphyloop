@@ -1,0 +1,50 @@
+name: Publish
+
+# Automatic npm releases:
+#   - push a version tag (v* — created by `npm version patch|minor|major`)
+#     -> tests run -> npm publish (token path)
+#   - manual fallback via "Run workflow" when the token cannot bypass 2FA:
+#     supply the current npm one-time password in the `otp` input.
+#   - `dry_run=true` validates the whole pipeline without shipping.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      otp:
+        description: 'npm 2FA one-time password (only if NPM_TOKEN cannot bypass 2FA)'
+        required: false
+      dry_run:
+        description: 'Pack + test only, do not publish (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+
+      - name: Test suite (gate)
+        run: node scripts/run-tests.mjs
+
+      - name: Publish to npm (token)
+        if: ${{ github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) }}
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm (OTP)
+        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.otp != '' && github.event.inputs.otp != null }}
+        run: npm publish --otp "${{ github.event.inputs.otp }}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Dry run (pack + verify, no publish)
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: npm publish --dry-run
