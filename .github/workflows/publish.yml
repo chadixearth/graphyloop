@@ -58,7 +58,7 @@ jobs:
 
       - name: Publish skipped (no token, no otp)
         if: ${{ github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) && steps.tokencheck.outputs.present == 'no' }}
-        run: echo "PUBLISH_SKIPPED: add the NPM_TOKEN secret or run with the otp input to publish"
+        run: 'echo "PUBLISH_SKIPPED: add the NPM_TOKEN secret or run with the otp input to publish"'
 
       - name: Dry run (pack + verify, no publish)
         if: ${{ github.event.inputs.dry_run == 'true' }}
