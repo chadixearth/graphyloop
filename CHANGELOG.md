@@ -4,6 +4,13 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.1.4] — 2026-08-14
+
+### Fixed
+- **Republish.** `0.1.3` was already live on the registry and cannot be
+  overwritten, so the identical tree ships as `0.1.4` to make `npm publish`
+  succeed. No functional changes.
+
 ## [0.1.3] — 2026-08-14
 
 ### Added
@@ -86,6 +93,7 @@ bump may still change behaviour.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
+[0.1.4]: https://github.com/chadixearth/graphyloop/compare/v0.1.3...HEAD
 [0.1.3]: https://github.com/chadixearth/graphyloop/compare/v0.1.2...HEAD
 [0.1.2]: https://github.com/chadixearth/graphyloop/releases/tag/v0.1.2
 [0.1.1]: https://github.com/chadixearth/graphyloop/releases/tag/v0.1.1
