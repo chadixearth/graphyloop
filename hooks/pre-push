@@ -1,0 +1,46 @@
+#!/bin/sh
+# Block a push whose test suite does not pass.
+#
+# This exists because of a real incident: the suite was run as
+# `node scripts/run-tests.mjs | tail`, so the shell reported tail's exit code
+# instead of the runner's, a "&&" gate passed vacuously, and a commit with a
+# failing test reached main. CI caught it in 34 seconds, but the repo should not
+# depend on anyone remembering to read the right exit code.
+#
+# Runs unpiped, on purpose: $? must be the runner's status. Output goes straight
+# to the terminal so a failure is visible rather than swallowed.
+#
+# Enable in a fresh clone:  git config core.hooksPath hooks
+# Deliberate bypass:        git push --no-verify
+
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+cd "$repo_root" || exit 1
+
+# Nothing to test on a branch deletion.
+if [ -t 0 ]; then
+  :
+else
+  deleting_only=1
+  while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    [ -z "$local_sha" ] && continue
+    case "$local_sha" in
+      0000000000000000000000000000000000000000) ;;
+      *) deleting_only=0 ;;
+    esac
+  done
+  [ "$deleting_only" = "1" ] && exit 0
+fi
+
+printf 'pre-push: running the test suite (git push --no-verify to skip)\n\n'
+
+node scripts/run-tests.mjs
+status=$?
+
+if [ "$status" -ne 0 ]; then
+  printf '\npre-push: BLOCKED — the test suite exited %s.\n' "$status"
+  printf 'Fix it, or push with --no-verify if you know exactly why you are shipping this.\n'
+  exit 1
+fi
+
+printf '\npre-push: suite passed, pushing.\n'
+exit 0

@@ -228,6 +228,42 @@ test('a missing value is reported instead of swallowing the next flag', () => {
   assert.equal(res.error, 'need --content', JSON.stringify(res))
 })
 
+// The engine has to validate on its own account: the MCP layer screens input
+// before it, but the CLI and the OpenCode plugin call straight through, so a
+// guard that only exists in mcp.mjs protects one of the three entry points.
+test('memory-forget validates its own id and reports a miss', () => {
+  cli(['init'])
+  assert.match(cli(['memory-forget']).error, /need --id/)
+  assert.match(cli(['memory-forget', '--id', '   ']).error, /need --id/)
+  assert.match(cli(['memory-forget', '--id', 'mem-does-not-exist']).error, /no memory with id/)
+
+  cli(['memory-store', '--content', 'retract me'])
+  const hit = cli(['memory-search', '--query', 'retract']).results[0]
+  const gone = cli(['memory-forget', '--id', hit.id])
+  assert.equal(gone.ok, true, JSON.stringify(gone))
+  assert.equal(gone.removed.id, hit.id)
+  assert.equal(cli(['memory-search', '--query', 'retract']).results.length, 0, 'no longer recalled')
+})
+
+test('memory search ranks a fresh match above a stale one', () => {
+  cli(['init'])
+  // Same query relevance, different ages: recency has to break the tie.
+  const state = JSON.parse(readFileSync(stateFile(), 'utf8'))
+  const day = 86400000
+  state.memories.push(
+    { id: 'old-one', agentId: 'system', content: 'cache invalidation rule', type: 'lesson', timestamp: Date.now() - 120 * day },
+    { id: 'new-one', agentId: 'system', content: 'cache invalidation rule', type: 'lesson', timestamp: Date.now() }
+  )
+  writeFileSync(stateFile(), JSON.stringify(state))
+
+  const found = cli(['memory-search', '--query', 'cache invalidation rule'])
+  assert.equal(found.results[0].id, 'new-one', `fresh match first: ${found.results.map((r) => r.id)}`)
+
+  const filtered = cli(['memory-search', '--query', 'cache', '--type', 'event'])
+  assert.ok(!filtered.results.some((m) => m.id === 'new-one'), 'type filter excludes other types')
+  assert.match(cli(['memory-search', '--query', 'cache', '--type', 'nonsense']).error, /unknown memory type/)
+})
+
 test('empty search query is rejected rather than dumping every memory', () => {
   cli(['init'])
   cli(['memory-store', '--content', 'a'])

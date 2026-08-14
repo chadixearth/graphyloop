@@ -14,6 +14,10 @@ bump may still change behaviour.
 - Octopus mark and a drawn 5-gate workflow diagram (`assets/`, light and dark).
 - npm metadata: `repository`, `bugs`, `homepage`, `keywords`, `author`.
 - `CHANGELOG.md`, `CONTRIBUTING.md`, issue and pull-request templates.
+- `hooks/pre-push` runs the test suite and blocks the push if it fails. A commit
+  with a failing test once reached `main` because the runner had been piped into
+  another command, so the shell reported that command's exit code; the hook runs
+  it unpiped and gates on its real status.
 
 ### Changed
 - **MCP tools run in-process.** The engine moved to `lib/engine.mjs` and is now

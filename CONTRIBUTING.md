@@ -24,9 +24,18 @@ fails — several tests here were caught being vacuous that way.
 ```bash
 git clone https://github.com/chadixearth/graphyloop.git
 cd graphyloop
-npm test                                   # 48 tests, no network, no deps
+git config core.hooksPath hooks            # enables the repo's git hooks
+npm test                                   # 50 tests, no network, no deps
 node bin/graphyloop.mjs install --home /tmp/sandbox --harness all --force
 ```
+
+`core.hooksPath hooks` turns on two hooks: `prepare-commit-msg` adds the AI
+co-author trailers, and `pre-push` runs the suite and refuses to push if it
+fails. The second exists because a commit with a failing test once reached
+`main` — the suite had been piped into another command, so the shell reported
+*that* command's exit code and a `&&` gate passed vacuously. Never pipe the
+runner when you are gating on it; the hook runs it unpiped for exactly this
+reason. `git push --no-verify` bypasses it when you genuinely mean to.
 
 Always install into a `--home` sandbox while developing. Installing into your
 real home directory mid-change is how you end up debugging your own editor.
@@ -57,8 +66,8 @@ juggling. If you move a file, keep that shape.
 ## Tests
 
 ```bash
-npm test                       # everything
-node --test test/engine.test.mjs   # or one file
+npm test                       # everything (50 tests)
+node --test test/adapter.test.mjs  # or one file
 ```
 
 - `test/adapter.test.mjs` — engine state: durability, migration, concurrency, validation.
