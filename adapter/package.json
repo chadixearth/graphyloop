@@ -1,0 +1,30 @@
+{
+  "name": "@opencode/graphyloop-adapter",
+  "version": "1.0.0",
+  "description": "GraphyLoop meta-harness adapter for OpenCode + DeepSeek — swarm coordination, hybrid memory, neural routing",
+  "type": "module",
+  "main": "cli.mjs",
+  "files": [
+    "cli.mjs",
+    "index.ts",
+    "swarm.ts",
+    "memory.ts",
+    "deepseek-provider.ts",
+    "path-mapper.ts",
+    "types.ts",
+    "generate-config.ts"
+  ],
+  "scripts": {
+    "init": "npx tsx generate-config.ts",
+    "test": "echo 'Tests: see README'",
+    "check": "npx tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
+}
