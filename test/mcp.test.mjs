@@ -245,8 +245,11 @@ test('server exits with code 0 on stdin EOF', { timeout: 15000 }, async () => {
 })
 
 test('missing graphyloop CLI: tools/list works, tools/call returns isError', { timeout: 15000 }, async () => {
-  const missingCli = join(homeDir, '.graphyloop', 'graphyloop', 'does-not-exist.mjs')
-  const s = spawnServer({ GRAPHYLOOP_CLI: missingCli })
+  // Force an empty fake home via GRAPHYLOOP_HOME so the default CLI path
+  // (~/.graphyloop/graphyloop/cli.mjs) is guaranteed missing regardless of the
+  // machine's real ~/.graphyloop state.
+  const emptyHome = mkdtempSync(join(tmpdir(), 'graphyloop-mcp-empty-'))
+  const s = spawnServer({ GRAPHYLOOP_HOME: emptyHome, GRAPHYLOOP_CLI: undefined })
   const r = createLineReader(s.stdout)
   try {
     s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })}\n`)
@@ -264,5 +267,6 @@ test('missing graphyloop CLI: tools/list works, tools/call returns isError', { t
       s.kill('SIGTERM')
       await waitExit(s, 3000).catch(() => {})
     }
+    rmSync(emptyHome, { recursive: true, force: true })
   }
 })
