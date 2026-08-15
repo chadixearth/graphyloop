@@ -350,6 +350,14 @@ export default async (input) => {
         },
       }),
 
+      graphyloop_skills: tool({
+        description: 'Which skills are installed on this machine (project .opencode/skills, ~/.config/opencode/skills, ~/.claude/skills), which graphyloop-bundled skills are present (graphyloop-waves, supabase-setup, vercel-deploy, secrets-hygiene, swarm-memory), and which skills the squad routes on but are missing. Check here instead of guessing — a missing skill is reported in one line, never faked.',
+        args: {},
+        async execute() {
+          return JSON.stringify(runCli(['skills'], projectDir), null, 2);
+        },
+      }),
+
       graphyloop_shutdown: tool({
         description: 'Shut down the swarm (terminates agents, keeps memory). Call at session end.',
         args: {},

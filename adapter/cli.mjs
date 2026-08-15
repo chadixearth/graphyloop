@@ -197,6 +197,9 @@ try {
     case 'stack':
       output(engine.stack());
       break;
+    case 'skills':
+      output(engine.skills());
+      break;
     case 'shutdown':
       output(engine.shutdown());
       break;
@@ -226,6 +229,7 @@ try {
           'env-sync': `${USAGE_CLI} env-sync [--target .env.local] [--providers supabase,vercel] [--force]`,
           preflight: `${USAGE_CLI} preflight --target db|deploy|all`,
           stack: `${USAGE_CLI} stack`,
+          skills: `${USAGE_CLI} skills`,
           shutdown: `${USAGE_CLI} shutdown`,
         },
         agentTypes: AGENT_TYPES,

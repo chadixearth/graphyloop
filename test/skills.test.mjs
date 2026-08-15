@@ -158,6 +158,41 @@ test('skillFiles() maps every shipped file for byte-identical matching', () => {
   }
 })
 
+// ---------------------------------------------------------------------------
+// Runtime detection: an agent must be able to ask "is it actually there?"
+// ---------------------------------------------------------------------------
+
+test('the engine reports installed vs missing skills, and points at update when bundled ones are absent', () => {
+  const project = join(home, 'proj')
+  mkdirSync(project, { recursive: true })
+  const engineCli = join(REPO_ROOT, 'adapter', 'cli.mjs')
+  const run = () => {
+    const r = spawnSync(process.execPath, [engineCli, 'skills'], {
+      encoding: 'utf8',
+      timeout: 30000,
+      env: { ...process.env, GRAPHYLOOP_PROJECT_ROOT: project, GRAPHYLOOP_HOME: home },
+    })
+    assert.equal(r.status, 0, `exit ${r.status}: ${r.stdout}${r.stderr}`)
+    return JSON.parse(r.stdout)
+  }
+
+  // Nothing installed under this fake home yet.
+  const before = run()
+  assert.equal(before.ok, true)
+  assert.deepEqual(before.bundled.missing, bundledSkills(), 'all bundled skills reported missing')
+  assert.match(before.note, /graphyloop@latest update/)
+
+  install()
+
+  const after = run()
+  assert.deepEqual(after.bundled.missing, [], `still missing: ${after.bundled.missing}`)
+  assert.deepEqual(after.bundled.installed.sort(), bundledSkills(), 'bundled skills detected after install')
+  assert.match(after.note, /are installed/)
+  // Skills the squad routes on but does not ship are reported, not silently assumed.
+  assert.ok(Array.isArray(after.referenced.missing))
+  assert.ok(after.roots.some((r) => r.harness === 'opencode' && r.present && r.count > 0))
+})
+
 function install() {
   const r = cli('install', '--home', home, '--harness', 'opencode')
   assert.equal(r.code, 0, `install failed: ${r.out}${r.err}`)
