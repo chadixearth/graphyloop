@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
-## [Unreleased]
+## [0.2.0] — 2026-08-16
 
 ### Added
 - **Bundled skills.** Every agent routed on skills by name while graphyloop
