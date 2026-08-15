@@ -35,12 +35,33 @@ jobs:
           grep -q GRAPH_LOOP_INSTALLED /tmp/install.log
           test -f "$SANDBOX/.graphyloop/graphyloop/cli.mjs"
           test -f "$SANDBOX/.graphyloop/mcp-server.mjs"
-          test -f "$SANDBOX/.graphyloop/lib/mcp.mjs"
-          test -f "$SANDBOX/.graphyloop/lib/engine.mjs"
+          # engine.mjs imports these statically: a tree missing one cannot load.
+          for f in mcp engine secrets stack planner; do
+            test -f "$SANDBOX/.graphyloop/lib/$f.mjs"
+          done
           test -d "$SANDBOX/.claude/agents"
           test -f "$SANDBOX/.codex/config.toml"
           test -f "$SANDBOX/.cursor/mcp.json"
+          # Bundled skills must land in both skill roots, or a fresh setup has
+          # agents routing on skills that are not there.
+          test -f "$SANDBOX/.config/opencode/skills/graphyloop-waves/SKILL.md"
+          test -f "$SANDBOX/.claude/skills/secrets-hygiene/SKILL.md"
           echo "INSTALLER_SMOKE_OK"
+      - name: Update refreshes an existing install
+        shell: bash
+        run: |
+          SANDBOX=$(mktemp -d)
+          node bin/graphyloop.mjs install --home "$SANDBOX" --harness opencode > /dev/null 2>&1
+          # Simulate the drift users actually hit: an older version whose core tree
+          # predates a module the current engine imports.
+          echo '{"name":"graphyloop","version":"0.0.1"}' > "$SANDBOX/.graphyloop/package.json"
+          rm "$SANDBOX/.graphyloop/lib/secrets.mjs"
+          node bin/graphyloop.mjs update --check --json --home "$SANDBOX" | grep -q '"status": "incomplete"'
+          node bin/graphyloop.mjs update --home "$SANDBOX" > /tmp/update.log 2>&1
+          grep -q GRAPH_LOOP_UPDATED /tmp/update.log
+          test -f "$SANDBOX/.graphyloop/lib/secrets.mjs"
+          node bin/graphyloop.mjs update --check --json --home "$SANDBOX" | grep -q '"status": "up-to-date"'
+          echo "UPDATE_SMOKE_OK"
       - name: Installed MCP server responds
         shell: bash
         run: |
@@ -56,6 +77,13 @@ jobs:
           grep -q 'package/bin/graphyloop.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/lib/mcp.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/lib/engine.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/secrets.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/stack.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/planner.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/install-skills.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/skills/graphyloop-waves/SKILL.md' /tmp/graphyloop-files.txt
+          grep -q 'package/skills/secrets-hygiene/SKILL.md' /tmp/graphyloop-files.txt
+          grep -q 'package/agents/chadi-integrator.md' /tmp/graphyloop-files.txt
           grep -q 'package/mcp-server.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/plugin/graphyloop/plugin.js' /tmp/graphyloop-files.txt
           grep -q 'package/adapter/cli.mjs' /tmp/graphyloop-files.txt

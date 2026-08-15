@@ -4,6 +4,7 @@
 // Exit 0 on success, 1 on failure. Works on Node 20/22/24, all platforms.
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { TOOL_NAMES } from '../lib/mcp.mjs';
 
 function arg(name) {
   const i = process.argv.indexOf(name);
@@ -44,11 +45,22 @@ setTimeout(() => {
     console.error(`tools/list response not JSON: ${lines[1]}`);
     process.exit(1);
   }
-  if (!list.result || !Array.isArray(list.result.tools) || list.result.tools.length !== 9) {
-    console.error(`expected 9 tools, got: ${JSON.stringify(list.result).slice(0, 200)}`);
+  // Compare against the registry this repo ships instead of a hardcoded number.
+  // A stale count here failed the whole matrix for a passing server, and the
+  // identical mistake in the test suite hung the run outright.
+  if (!list.result || !Array.isArray(list.result.tools)) {
+    console.error(`tools/list has no tools array: ${JSON.stringify(list.result).slice(0, 200)}`);
     process.exit(1);
   }
-  console.log('MCP_SERVER_OK');
+  const got = list.result.tools.map((t) => t.name).sort();
+  const want = [...TOOL_NAMES].sort();
+  const missing = want.filter((n) => !got.includes(n));
+  const extra = got.filter((n) => !want.includes(n));
+  if (missing.length || extra.length) {
+    console.error(`installed server tool set differs from this build — missing: [${missing}] unexpected: [${extra}]`);
+    process.exit(1);
+  }
+  console.log(`MCP_SERVER_OK (${got.length} tools)`);
   server.stdin.end();
   process.exit(0);
 }, 3000);
