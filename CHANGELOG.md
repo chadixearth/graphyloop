@@ -7,6 +7,29 @@ bump may still change behaviour.
 ## [Unreleased]
 
 ### Added
+- **Bundled skills.** Every agent routed on skills by name while graphyloop
+  shipped none, so on a fresh machine the squad reported "skill missing" and fell
+  back — a new install was weaker than the workflow it advertised. Five
+  graphyloop-authored skills now install with the agents (`<config>/skills` for
+  OpenCode, `~/.claude/skills` for Claude): `graphyloop-waves`, `supabase-setup`,
+  `vercel-deploy`, `secrets-hygiene`, `swarm-memory`. An existing skill directory
+  of the same name is **never** overwritten — not by `--force`, not by `update`;
+  users install skills from several collections into one tree and clobbering one
+  would be data loss dressed as an upgrade. Uninstall removes only skill files
+  still byte-identical to ours.
+- **`skills_status` (MCP) / `graphyloop_skills` (plugin) / `skills` (CLI).**
+  Reports which skills exist across the project, OpenCode and Claude roots, which
+  bundled ones are present, and which referenced ones are missing, so an agent
+  can state a gap in one line instead of faking a skill it never loaded.
+- **`chadi-integrator`** — the wave-2 join had no owner: the planner handed it to
+  `chadi-backend`, which either widened one lane's file ownership or left the
+  integration to nobody. The new agent swaps mocks for real calls, wires
+  credentials, applies local migrations, boots the happy path, and carries an
+  explicit contract-drift policy (fix cosmetic mismatches and record them; send
+  semantic ones back to the lane that drifted; stop if the contract itself is
+  wrong rather than silently redefining it).
+- Each subagent `.md` now names its primary and supporting skills, so skill
+  routing is a mapping rather than improvisation.
 - **Wave planner — `plan_feature` (MCP) / `graphyloop_plan_feature` (plugin) /
   `plan --goal` (CLI).** "I want an inventory system" now decomposes into
   contract (one agent freezes schema + routes + props + test scenarios) →

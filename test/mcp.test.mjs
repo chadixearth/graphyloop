@@ -37,6 +37,7 @@ const EXPECTED_TOOLS = [
   'secrets_set',
   'env_sync',
   'preflight',
+  'skills_status',
   'shutdown',
 ]
 

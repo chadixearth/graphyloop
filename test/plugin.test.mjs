@@ -91,6 +91,7 @@ test('exposes the graphyloop_* tool set', async () => {
     'graphyloop_secrets_set',
     'graphyloop_secrets_status',
     'graphyloop_shutdown',
+    'graphyloop_skills',
     'graphyloop_spawn',
     'graphyloop_status',
   ])
