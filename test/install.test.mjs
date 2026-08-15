@@ -26,10 +26,11 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { TOOL_NAMES } from '../lib/mcp.mjs'
+import { CORE_LIB_FILES } from '../lib/install-core.mjs'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const BIN = join(REPO_ROOT, 'bin', 'graphyloop.mjs')
-
 // Derived from the repo, not hardcoded: adding an agent or a command should not
 // require editing this file, but a *dropped* one still fails the assertions.
 const AGENT_COUNT = readdirSync(join(REPO_ROOT, 'agents')).filter((f) => f.endsWith('.md')).length
@@ -297,8 +298,9 @@ test('installed MCP server runs from ~/.graphyloop (self-contained artifact)', a
   const { spawn } = await import('node:child_process')
   const installedMcp = join(sandbox, '.graphyloop', 'mcp-server.mjs')
   assert.ok(existsSync(installedMcp), 'mcp-server.mjs installed')
-  assert.ok(existsSync(join(sandbox, '.graphyloop', 'lib', 'mcp.mjs')), 'lib/mcp.mjs installed alongside')
-  assert.ok(existsSync(join(sandbox, '.graphyloop', 'lib', 'engine.mjs')), 'lib/engine.mjs installed alongside')
+  for (const name of CORE_LIB_FILES) {
+    assert.ok(existsSync(join(sandbox, '.graphyloop', 'lib', name)), `lib/${name} installed alongside`)
+  }
 
   const projectDir = mkdtempSync(join(tmpdir(), 'graphyloop-inst-mcp-proj-'))
   const s = spawn(process.execPath, [installedMcp], {
@@ -311,16 +313,29 @@ test('installed MCP server runs from ~/.graphyloop (self-contained artifact)', a
   s.stderr.resume()
   const exit = new Promise((res) => s.on('exit', res))
 
-  s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} })}\n`)
-  s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} })}\n`)
-  await new Promise((res) => setTimeout(res, 1500))
-  const lines = out.trim().split('\n')
-  assert.equal(lines.length, 2, `installed server responded to both requests: ${out}`)
-  assert.equal(JSON.parse(lines[0]).result.serverInfo.name, 'graphyloop-mcp')
-  assert.equal(JSON.parse(lines[1]).result.tools.length, 9, 'installed server lists 9 tools')
-  s.stdin.end()
-  await exit
-  rmSync(projectDir, { recursive: true, force: true })
+  // try/finally is load-bearing: a failing assertion used to skip stdin.end(),
+  // and the spawned server then held its stdio pipes open forever — `node --test`
+  // waits on the handle, so one stale expectation hung the whole suite instead of
+  // reporting a failure.
+  try {
+    s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} })}\n`)
+    s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} })}\n`)
+    await new Promise((res) => setTimeout(res, 1500))
+    const lines = out.trim().split('\n')
+    assert.equal(lines.length, 2, `installed server responded to both requests: ${out}`)
+    assert.equal(JSON.parse(lines[0]).result.serverInfo.name, 'graphyloop-mcp')
+    // Count comes from the shipped registry, so adding a tool never breaks this.
+    assert.equal(
+      JSON.parse(lines[1]).result.tools.length,
+      TOOL_NAMES.length,
+      `installed server lists ${TOOL_NAMES.length} tools`
+    )
+  } finally {
+    s.stdin.end()
+    await Promise.race([exit, new Promise((res) => setTimeout(res, 3000))])
+    if (s.exitCode === null) s.kill('SIGKILL')
+    rmSync(projectDir, { recursive: true, force: true })
+  }
 })
 
 test('--skip-agents leaves agent directories untouched', () => {

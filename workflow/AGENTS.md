@@ -109,6 +109,42 @@ Industry-style gates:
 - final code review
 - release notes and rollback notes for medium/high-risk work
 
+# Feature planning — wave dispatch (multi-layer work)
+
+For anything spanning more than one layer (database + backend + frontend, or a feature plus a data pipeline), do NOT improvise the decomposition and do NOT build it serially. Call `graphyloop_plan_feature` with the request as the goal and dispatch what it returns.
+
+The pipeline it produces, and the reason each wave exists:
+
+- **Wave 0 — contract (ONE agent, alone).** Freezes entities/columns/indexes, every API route with request/response JSON, component props, the test scenarios that define done, and the env keys needed, into `.opencode/chadi/contract-<slug>.md`. Nothing else starts until that file exists. Parallel building without a frozen contract produces three incompatible versions of the same table and moves the cost into integration.
+- **Wave 1 — builders, ALL in one tool-call block.** data ∥ backend ∥ frontend ∥ tests. The database lane runs *alongside* the frontend and backend, not before them — the schema was already decided in Wave 0. Frontend builds against mocks shaped like the contracted responses. Tests are written here, from the contract, and are expected to fail until integration.
+- **Wave 2 — integration (serial).** Swap mocks for real calls, apply migrations locally (dry-run first), `env_sync`, boot the app, walk the happy path. Only this wave may touch two lanes at once.
+- **Wave 3 — verify, ALL in one block.** tests ∥ typecheck/lint/build ∥ security ∥ performance ∥ review. All read-only, safe to overlap.
+- **Wave 4 — deploy (gated).** Only when shipping was asked for; production needs explicit approval plus a rollback plan.
+
+Dispatch rules:
+- `task_distribute` honours `wave` and `dependsOn`. Dispatch ONLY the ids it returns in `dispatchNow`; `blocked` entries name what they are waiting on.
+- After each result, `task_record` it — the response lists what that unblocked, which is the signal to fan out the next wave.
+- Every dispatch prompt carries the contract path, that lane's exclusive file list, and its acceptance check. Two edit-capable agents never own the same file in one wave.
+- Wall clock is Wave 0 + the slowest builder + integration + the slowest verifier — never the sum of the lanes.
+- `plan_feature` answering `shape: no-fanout` means it is not multi-layer work: handle it inline or as a single builder. Do not force a squad onto a one-file change.
+
+# Secrets, database and deploy discipline
+
+Credentials are never a chat message and never a literal in the repo.
+
+- **Never ask the user to paste a key into the conversation.** Name the exact key (`SUPABASE_SERVICE_ROLE_KEY`, `VERCEL_TOKEN`, ...), say where to get it, and store it with `secrets_set`. It lands in `<project>/.graphyloop/secrets.json` (chmod 600, git-ignored before the first write).
+- **Never print, echo, or repeat a credential value** — not in a report, not in a command you show, not in a commit. `secrets_status` returns masks only; there is no reveal tool, by design.
+- `env_sync` writes the values into the env file the framework actually reads (`.env.local` for Next/Vite) and refreshes a values-free `.env.example`. Values move file-to-file; they never pass through the model.
+- Public keys (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) get the framework's public alias. A service-role key NEVER does — a `NEXT_PUBLIC_*` service-role key ships in the browser bundle and hands every visitor full database access.
+- Before database or deploy work run `preflight` (`target=db|deploy|all`). It reports blockers and an ordered command plan and executes nothing. Clear every blocker first.
+- Migrations: dry-run and show the SQL before any apply. Applying to a hosted database, and any production deploy, needs explicit user approval and a rollback note (`vercel rollback`, or the down migration).
+- A local `.env.local` is not deployed. Every runtime key must also exist in the hosting provider's project settings, or the deploy builds and then fails at runtime.
+- If `.env*` files exist and `.gitignore` does not cover them, that is a blocker, not a note — fix it before committing anything.
+
+# Staying current
+
+`npx -y graphyloop@latest update` refreshes the installed core in place: it overwrites graphyloop-owned files (timestamped backup first), repairs a core tree missing new modules, and preserves your config keys. `npx graphyloop update --check` reports the drift without writing. `npx graphyloop doctor` prints the installed core version next to the package version — check it first when a graphyloop tool "does not exist" in a harness that is otherwise wired.
+
 # Verification and optional second opinions
 
 Main agent runs tests, security checklist, lint/typecheck when available, and final diff review.
@@ -157,7 +193,8 @@ GraphyLoop swarm auto-inits per project (plugin handles it — do not call graph
 
 - START of every non-trivial task: run `graphyloop_memory_search` with 2-4 task keywords BEFORE planning. If results exist, use them; if empty, say nothing and proceed — never fabricate memories.
 - END of every completed non-trivial task: `graphyloop_memory_store` one entry — type `decision` for choices made, `lesson` for gotchas hit, `pattern` for reusable approaches. One line, dense, searchable keywords.
-- When dispatching via graphyloop (`graphyloop_distribute`), `graphyloop_record` each task result after — keeps agent success metrics real.
+- When dispatching via graphyloop (`graphyloop_distribute`), `graphyloop_record` each task result after — keeps agent success metrics real, and its response tells you which tasks the result unblocked.
+- Multi-layer feature → `graphyloop_plan_feature` first (see § Feature planning). Database/deploy work → `graphyloop_secrets_status` / `graphyloop_env_sync` / `graphyloop_preflight` (see § Secrets, database and deploy discipline).
 - PMB MCP: graphyloop memory is the active store; call pmb_* tools only if you have the PMB MCP enabled in your config.
 - Blocked roots (home dir, opencode config, system dirs): graphyloop tools return a skip message — accept it, don't retry.
 

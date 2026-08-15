@@ -70,7 +70,8 @@ function isBlockedRoot(root) {
 }
 
 // Runs a graphyloop CLI command with the project dir set, returns parsed JSON.
-function runCli(args, projectDir) {
+// extraEnv carries values that must not appear on argv (credentials).
+function runCli(args, projectDir, extraEnv) {
   if (isBlockedRoot(projectDir)) {
     return { error: `graphyloop skipped: ${projectDir} is not a project root (system dir, home, or opencode config)` };
   }
@@ -79,7 +80,7 @@ function runCli(args, projectDir) {
     encoding: 'utf-8',
     timeout: 30000,
     windowsHide: true,
-    env: { ...process.env, GRAPHYLOOP_PROJECT_ROOT: projectDir },
+    env: { ...process.env, GRAPHYLOOP_PROJECT_ROOT: projectDir, ...(extraEnv || {}) },
   });
   if (res.error) return { error: `spawn failed: ${res.error.message}` };
   // The CLI reports its own failures as {error} on stdout with exit 0, so a
@@ -180,9 +181,9 @@ export default async (input) => {
       }),
 
       graphyloop_distribute: tool({
-        description: 'Distribute tasks across swarm agents. tasks = JSON string array of {id, type, description, priority}. Returns assignments with opencodeAgentType + prompt per task — dispatch those as task subagents.',
+        description: 'Distribute tasks across swarm agents. tasks = JSON string array of {id, type, description, priority} plus optional {wave, dependsOn, owns, acceptance, gate} (graphyloop_plan_feature emits exactly this shape). Returns assignments with opencodeAgentType + prompt, plus dispatchNow (deps satisfied — fan these out in ONE block) and blocked (still waiting, with waitingOn ids).',
         args: {
-          tasks: tool.schema.string().describe('JSON array of {id, type, description, priority}. type: code|test|review|security|data|ui|explore|design|coordinate'),
+          tasks: tool.schema.string().describe('JSON array of {id, type, description, priority[, wave, dependsOn, owns, acceptance]}. type: code|test|review|security|data|ui|explore|design|coordinate|schema|implement|validate|scan|analyze'),
         },
         async execute(args) {
           let parsed;
@@ -192,7 +193,13 @@ export default async (input) => {
           if (parsed.length === 0) return JSON.stringify({ error: 'tasks array is empty' });
           const res = ensureInit(projectDir);
           const dist = runCli(['distribute', '--tasks', args.tasks], projectDir);
-          return JSON.stringify({ init: res, assignments: dist.assignments || dist }, null, 2);
+          return JSON.stringify({
+            init: res,
+            assignments: dist.assignments || dist,
+            dispatchNow: dist.dispatchNow,
+            blocked: dist.blocked,
+            waves: dist.waves,
+          }, null, 2);
         },
       }),
 
@@ -260,6 +267,86 @@ export default async (input) => {
           const res = ensureInit(projectDir);
           const forget = runCli(['memory-forget', '--id', args.id], projectDir);
           return JSON.stringify({ init: res, forget }, null, 2);
+        },
+      }),
+
+      graphyloop_plan_feature: tool({
+        description: 'Plan a multi-layer feature as parallel waves BEFORE coding. Returns wave 0 contract (one agent freezes schema + API + props + test scenarios) -> wave 1 parallel builders (data ∥ backend ∥ frontend ∥ tests) -> wave 2 integration -> wave 3 parallel verifiers (test ∥ typecheck ∥ security ∥ performance ∥ review) -> wave 4 gated deploy. Each task carries its owned files, acceptance check and dependsOn. Feed plan.tasks to graphyloop_distribute.',
+        args: {
+          goal: tool.schema.string().describe('The feature request in plain words, e.g. "inventory system with stock levels and a dashboard"'),
+          includeDeploy: tool.schema.string().optional().describe('"true" to force the deploy wave on'),
+          maxParallel: tool.schema.string().optional().describe('Local builder concurrency cap (default 4)'),
+        },
+        async execute(args) {
+          if (!args.goal || !args.goal.trim()) return JSON.stringify({ error: 'goal is required' });
+          const a = ['plan', '--goal', args.goal];
+          if (args.includeDeploy === 'true' || args.includeDeploy === true) a.push('--deploy');
+          if (args.maxParallel) a.push('--maxParallel', String(args.maxParallel));
+          const init = ensureInit(projectDir);
+          const plan = runCli(a, projectDir);
+          return JSON.stringify({ init, plan }, null, 2);
+        },
+      }),
+
+      graphyloop_secrets_status: tool({
+        description: 'Masked readiness report for project credentials (Supabase, Vercel): which keys are set, where each comes from (env / graphyloop store / .env file), what is missing. Values are never returned. Call this before database or deploy work instead of asking the user to paste keys into chat.',
+        args: {
+          provider: tool.schema.string().optional().describe('supabase | vercel | all (default all)'),
+        },
+        async execute(args) {
+          const a = ['secrets-status'];
+          if (args.provider) a.push('--provider', args.provider);
+          return JSON.stringify(runCli(a, projectDir), null, 2);
+        },
+      }),
+
+      graphyloop_secrets_set: tool({
+        description: 'Store one credential in the project-local secret store (.graphyloop/secrets.json, chmod 600, git-ignored before the first write). Keys: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_URL, SUPABASE_PROJECT_REF, SUPABASE_ACCESS_TOKEN, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID. The value is written to disk and echoed back masked only.',
+        args: {
+          key: tool.schema.string().describe('UPPER_SNAKE_CASE key name, e.g. SUPABASE_URL'),
+          value: tool.schema.string().describe('The credential value (stored on disk, never echoed back)'),
+          provider: tool.schema.string().optional().describe('supabase | vercel (optional, inferred from the key)'),
+        },
+        async execute(args) {
+          if (!args.key || !args.key.trim()) return JSON.stringify({ error: 'key is required' });
+          if (!args.value || !args.value.trim()) return JSON.stringify({ error: 'value is required' });
+          const a = ['secrets-set', '--key', args.key];
+          if (args.provider) a.push('--provider', args.provider);
+          const init = ensureInit(projectDir);
+          // Passed through the env, not argv: an argv credential is visible in the
+          // process list to every other user on the machine.
+          const set = runCli(a, projectDir, { GRAPHYLOOP_SECRET_VALUE: args.value });
+          return JSON.stringify({ init, set }, null, 2);
+        },
+      }),
+
+      graphyloop_env_sync: tool({
+        description: 'Write stored credentials into the env file the framework reads (default .env.local), add public aliases for public keys only (NEXT_PUBLIC_*/VITE_*, never a service-role key), refresh a values-free .env.example, and ensure .gitignore covers the env files. Values move file-to-file; the result lists key names only.',
+        args: {
+          target: tool.schema.string().optional().describe('Env file name (default .env.local)'),
+          providers: tool.schema.string().optional().describe('Comma-separated provider filter, e.g. "supabase"'),
+          force: tool.schema.string().optional().describe('"true" to overwrite a key that already has a different value (backup kept)'),
+        },
+        async execute(args) {
+          const a = ['env-sync'];
+          if (args.target) a.push('--target', args.target);
+          if (args.providers) a.push('--providers', args.providers);
+          if (args.force === 'true' || args.force === true) a.push('--force');
+          return JSON.stringify(runCli(a, projectDir), null, 2);
+        },
+      }),
+
+      graphyloop_preflight: tool({
+        description: 'Readiness check + ordered command plan for database setup and/or deploy. Returns the detected stack, blockers (missing credentials, no build script, env file not git-ignored), warnings, and the exact commands — destructive steps (supabase db push, vercel --prod) carry the approval gate they need. Executes nothing.',
+        args: {
+          target: tool.schema.string().optional().describe('db | deploy | all (default all)'),
+        },
+        async execute(args) {
+          const target = args.target || 'all';
+          if (!['db', 'deploy', 'all'].includes(target)) {
+            return JSON.stringify({ error: 'target must be one of: db, deploy, all' });
+          }
+          return JSON.stringify(runCli(['preflight', '--target', target], projectDir), null, 2);
         },
       }),
 

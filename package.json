@@ -35,6 +35,15 @@
   "scripts": {
     "setup": "node setup.mjs",
     "test": "node scripts/run-tests.mjs",
+    "test:fast": "node scripts/run-tests.mjs --fast",
+    "test:list": "node scripts/run-tests.mjs --list",
+    "test:engine": "node scripts/run-tests.mjs adapter",
+    "test:secrets": "node scripts/run-tests.mjs secrets",
+    "test:planner": "node scripts/run-tests.mjs planner",
+    "test:mcp": "node scripts/run-tests.mjs mcp",
+    "test:plugin": "node scripts/run-tests.mjs plugin",
+    "test:install": "node scripts/run-tests.mjs install",
+    "test:update": "node scripts/run-tests.mjs update",
     "pack": "npm pack",
     "prepublishOnly": "node scripts/run-tests.mjs"
   },

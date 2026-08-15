@@ -10,11 +10,12 @@
  * Commands (all return JSON):
  *   init | status | spawn | distribute | record
  *   memory-store | memory-search | memory-forget
+ *   plan | secrets-status | secrets-set | secrets-forget | env-sync | preflight | stack
  *   shutdown | cleanup | ask
  */
 
 import { readFileSync } from 'node:fs';
-import { createEngine, AGENT_TYPES } from '../lib/engine.mjs';
+import { createEngine, AGENT_TYPES, SECRET_PROVIDERS } from '../lib/engine.mjs';
 
 const engine = createEngine();
 
@@ -36,6 +37,11 @@ function getArg(name) {
     }
   }
   return '';
+}
+
+/** Presence-only flag (`--force`), which getArg cannot express. */
+function hasFlag(name) {
+  return args.includes(`--${name}`) || args.some((a) => a === `--${name}=true`);
 }
 
 // System prompts for direct DeepSeek API calls (bypasses the harness).
@@ -155,6 +161,42 @@ try {
     case 'memory-forget':
       output(engine.memoryForget({ id: getArg('id') }));
       break;
+    case 'plan':
+      output(engine.planFeature({
+        goal: getArg('goal'),
+        includeDeploy: hasFlag('deploy'),
+        maxParallel: getArg('maxParallel') || getArg('max-parallel'),
+      }));
+      break;
+    case 'secrets-status':
+      output(engine.secretsStatus({ provider: getArg('provider') || undefined }));
+      break;
+    case 'secrets-set':
+      // The value is read from the environment first on purpose: an argv value is
+      // visible in `ps`/Task Manager and in any shell history the harness keeps.
+      output(engine.secretsSet({
+        key: getArg('key'),
+        value: process.env.GRAPHYLOOP_SECRET_VALUE || getArg('value'),
+        provider: getArg('provider') || undefined,
+      }));
+      break;
+    case 'secrets-forget':
+      output(engine.secretsForget({ key: getArg('key') }));
+      break;
+    case 'env-sync':
+      output(engine.envSync({
+        target: getArg('target') || undefined,
+        providers: getArg('providers') || undefined,
+        framework: getArg('framework') || undefined,
+        force: hasFlag('force'),
+      }));
+      break;
+    case 'preflight':
+      output(engine.preflight({ target: getArg('target') || 'all' }));
+      break;
+    case 'stack':
+      output(engine.stack());
+      break;
     case 'shutdown':
       output(engine.shutdown());
       break;
@@ -177,9 +219,17 @@ try {
           'memory-store': `${USAGE_CLI} memory-store --agent sys --content "text" --type event`,
           'memory-search': `${USAGE_CLI} memory-search --query "text" --limit 10 --type lesson`,
           'memory-forget': `${USAGE_CLI} memory-forget --id mem-123`,
+          plan: `${USAGE_CLI} plan --goal "inventory system with a dashboard" [--deploy]`,
+          'secrets-status': `${USAGE_CLI} secrets-status [--provider supabase|vercel|all]`,
+          'secrets-set': `GRAPHYLOOP_SECRET_VALUE=... ${USAGE_CLI} secrets-set --key SUPABASE_URL`,
+          'secrets-forget': `${USAGE_CLI} secrets-forget --key SUPABASE_URL`,
+          'env-sync': `${USAGE_CLI} env-sync [--target .env.local] [--providers supabase,vercel] [--force]`,
+          preflight: `${USAGE_CLI} preflight --target db|deploy|all`,
+          stack: `${USAGE_CLI} stack`,
           shutdown: `${USAGE_CLI} shutdown`,
         },
         agentTypes: AGENT_TYPES,
+        secretProviders: SECRET_PROVIDERS,
       });
   }
 } catch (e) {

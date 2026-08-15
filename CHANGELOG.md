@@ -4,6 +4,71 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [Unreleased]
+
+### Added
+- **Wave planner — `plan_feature` (MCP) / `graphyloop_plan_feature` (plugin) /
+  `plan --goal` (CLI).** "I want an inventory system" now decomposes into
+  contract (one agent freezes schema + routes + props + test scenarios) →
+  **database ∥ backend ∥ frontend ∥ tests** → integration → **test ∥ typecheck ∥
+  security ∥ performance ∥ review** → gated deploy. Every task carries its
+  exclusive file list, acceptance check and `dependsOn`, so the database lane
+  runs alongside the UI lanes instead of blocking them, and no builder starts
+  before the contract exists.
+- **`wave` + `dependsOn` in `task_distribute`.** The plan is enforced, not just
+  described: dispatch answers with `dispatchNow` (dependencies satisfied) and
+  `blocked` (with `waitingOn`), `task_record` reports which tasks its result
+  unblocked, and `swarm_state` reports ready/blocked counts per wave. A
+  dependency on an id that does not exist blocks rather than dispatching early.
+  Tasks without `wave`/`dependsOn` behave exactly as before.
+- **Supabase + Vercel credential layer.** `secrets_status` (masked readiness
+  report — which keys exist, where each comes from, what is missing; never
+  returns a value), `secrets_set` (stores one key in
+  `<project>/.graphyloop/secrets.json`, chmod 600, git-ignored *before* the first
+  write), `env_sync` (copies values file-to-file into the env file the framework
+  reads, adds `NEXT_PUBLIC_*`/`VITE_*` aliases for public keys **only**,
+  refreshes a values-free `.env.example`, guards `.gitignore`), and `preflight`
+  (`db`/`deploy` blockers, warnings and an ordered command plan where every
+  destructive step carries its approval gate — it executes nothing).
+  A credential is never echoed back to the model, and on the spawn path it
+  travels through the environment instead of argv so it stays out of the process
+  list.
+- **`graphyloop update [--check]`.** Refreshes an existing install in place:
+  overwrites graphyloop-owned files (timestamped backup first), repairs a core
+  tree missing newer modules, preserves config keys, plugin lists and models.
+  `--check` (plus `--json`) reports `up-to-date` / `update-available` /
+  `incomplete` / `not-installed` and writes nothing. `doctor` now prints the
+  installed core version next to the package version, which is the first thing
+  to check when a tool "does not exist" in a wired harness.
+- `/chadi-waves`, `/chadi-db` and `/chadi-deploy` commands, plus workflow rules
+  for wave dispatch and secret/deploy discipline in `workflow/AGENTS.md` and
+  `agents/agent-chadi.md`.
+- `stack` CLI command (framework, package manager, database layer, deploy
+  target, migrations, scripts) — evidence-based detection used by the planner and
+  preflight.
+
+### Changed
+- Test suites are split per area (`adapter`, `secrets`, `planner`, `mcp`,
+  `plugin`, `install`, `update`) and the runner takes filters
+  (`node scripts/run-tests.mjs planner mcp`, `--fast`, `--list`) with matching
+  `npm run test:*` scripts. Iterating on one area no longer pays for the
+  installer suite. 105 tests.
+- `install-core` exports `CORE_LIB_FILES` and installs every engine module
+  (`engine`, `mcp`, `secrets`, `stack`, `planner`); the MCP server, installer and
+  update checks all read that one list, so a new module cannot be left out of an
+  installed tree.
+
+### Fixed
+- **A failing assertion in the installer suite hung the entire test run.** The
+  installed-MCP-server test asserted a hardcoded tool count and, on failure,
+  skipped `stdin.end()` — the spawned server kept its stdio pipes open and
+  `node --test` waited on the handle forever, so a stale expectation looked like
+  an infinite hang instead of a reported failure. The count now comes from the
+  shipped tool registry (`TOOL_NAMES`) and the child is closed in a `finally`.
+- Planner lane detection matches whole words, so "review the diff" no longer
+  triggers the frontend lane via "view" and a one-file rename is reported as
+  `no-fanout` instead of being handed a squad.
+
 ## [0.1.4] — 2026-08-14
 
 ### Fixed

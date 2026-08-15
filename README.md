@@ -88,9 +88,9 @@ Do not ask permission for reversible steps — proceed. Stop only for: Node < 20
 
 | Harness | Agents | Commands | Rules | Tools |
 |---|---|---|---|---|
-| **OpenCode** | 25 agent files | 12 `/chadi-*` commands | AGENTS.md | graphyloop plugin (`graphyloop_*` tools) |
-| **Claude Code** | 25 agent files | 12 `/chadi-*` commands | AGENTS.md | MCP server (`√ Connected`) |
-| **Codex** | 12 prompts | 12 prompts | AGENTS.md | MCP server (`enabled`) |
+| **OpenCode** | 25 agent files | 15 `/chadi-*` commands | AGENTS.md | graphyloop plugin (`graphyloop_*` tools) |
+| **Claude Code** | 25 agent files | 15 `/chadi-*` commands | AGENTS.md | MCP server (`√ Connected`) |
+| **Codex** | 15 prompts | 15 prompts | AGENTS.md | MCP server (`enabled`) |
 | **Cursor / Windsurf** | — | — | AGENTS.md | MCP server |
 
 Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a real install + MCP handshake smoke on every combination.
@@ -106,7 +106,9 @@ Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a re
 | 🤖 **24-agent squad** | Specialized agents for exploration, backend, frontend, testing, security, review, refactoring, docs, data, performance, and more (see [Squad](#squad-agents)) |
 | 🛡️ **5-gate delivery workflow** | Classify → Discover → Implement → Verify → Report, with lane-based verification and evidence-first reporting |
 | 🔌 **Universal MCP bridge** | The same graphyloop tools work in Claude Code, Codex, Cursor, Windsurf, OpenCode — any MCP-capable harness |
-| 📋 **12 slash commands** | `chadi-init` · `chadi-fast` · `chadi-review` · `chadi-plan` · `chadi-audit` · `chadi-release` · `chadi-research` · `chadi-confusing` · `chadi-discuss` · `chadi-go` · `chadi-recall` · `chadi-skills` |
+| 📋 **15 slash commands** | `chadi-init` · `chadi-fast` · `chadi-review` · `chadi-plan` · `chadi-waves` · `chadi-db` · `chadi-deploy` · `chadi-audit` · `chadi-release` · `chadi-research` · `chadi-confusing` · `chadi-discuss` · `chadi-go` · `chadi-recall` · `chadi-skills` |
+| 🌊 **Wave planner** | One call turns "I want an inventory system" into contract → **database ∥ backend ∥ frontend ∥ tests** → integration → **test ∥ typecheck ∥ security ∥ performance ∥ review** → gated deploy, with file ownership and dependencies the engine enforces |
+| 🔑 **Supabase + Vercel credentials** | Store keys once per project (chmod 600, git-ignored before the first write), sync them into the env file the framework reads, and preflight database/deploy work. Values are never returned to the model |
 | 🔒 **Config safety** | Timestamped backups before every write, never overwrites your config keys, idempotent re-runs, uninstall removes only byte-identical copies |
 | ⚡ **Zero dependencies** | Pure Node (≥ 20), no npm packages at runtime, no shell scripts — installs the same on every platform |
 
@@ -131,7 +133,7 @@ Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a re
 User --> Harness (OpenCode / Claude Code / Codex / Cursor / Windsurf)
               |
               v
-        MCP bridge (8 graphyloop tools)  <----  OpenCode plugin (graphyloop_* tools)
+        MCP bridge (14 graphyloop tools)  <----  OpenCode plugin (graphyloop_* tools)
               |
               v
         graphyloop engine (adapter/cli.mjs)
@@ -156,12 +158,17 @@ Once installed, any MCP-capable harness can call:
 |---|---|
 | `agent_spawn` | Spawn a swarm agent — `coder`, `tester`, `reviewer`, `architect`, `explorer`, `security`, `coordinator`, `frontend`, `data` |
 | `agent_list` | List swarm agents |
-| `task_distribute` | Distribute tasks across the swarm (JSON array of `{id, type, description, priority}`) |
-| `task_record` | Record a task result (updates agent metrics) |
-| `swarm_state` | Swarm status + memory count |
+| `plan_feature` | Turn a feature request into a **wave plan** — contract → parallel builders → integration → parallel verifiers → gated deploy, with per-lane file ownership, acceptance checks and `dependsOn` |
+| `task_distribute` | Distribute tasks across the swarm. Honours `wave` + `dependsOn`, and answers with `dispatchNow` (safe to fan out) vs `blocked` (with `waitingOn`) |
+| `task_record` | Record a task result (updates agent metrics, reports what the result unblocked) |
+| `swarm_state` | Swarm status + memory count + ready/blocked tasks per wave |
 | `memory_store` | Persist a memory entry — `decision`, `pattern`, `lesson`, `event`, `task` |
 | `memory_search` | Keyword-search stored memories — ranked by match quality with a recency bias, optional `type` filter |
 | `memory_forget` | Delete one memory by id, so a wrong lesson can be corrected instead of recalled forever |
+| `secrets_status` | Masked readiness report for Supabase/Vercel credentials — which keys exist, where each comes from, what is missing. **Never returns a value** |
+| `secrets_set` | Store one credential in `<project>/.graphyloop/secrets.json` (chmod 600, git-ignored before the first write) |
+| `env_sync` | Write stored credentials into the env file the framework reads, add public aliases for public keys only, refresh a values-free `.env.example`, guard `.gitignore` |
+| `preflight` | Readiness check + ordered command plan for `db` / `deploy` — blockers, warnings, and gates on every destructive step. Executes nothing |
 | `shutdown` | Gracefully stop the swarm |
 
 Tools run **in-process**: the server calls the engine directly instead of spawning a child process per call, which measured **3.8 ms per tool call against 73.7 ms** for the old spawn path, and stops one slow call from blocking the rest.
@@ -216,7 +223,8 @@ Plus: an internal-decision policy (no bouncing reversible decisions back), shell
 npx graphyloop install [--harness opencode|claude|codex|cursor|all]
                        [--force] [--skip-agents] [--skip-workflow]
                        [--no-config-merge] [--config-dir DIR] [--graphyloop-dir DIR]
-npx graphyloop doctor              # what's detected on this machine
+npx graphyloop update [--check]     # refresh an existing install in place
+npx graphyloop doctor              # what's detected on this machine + installed core version
 npx graphyloop status [--json]     # swarm status via the graphyloop engine
 npx graphyloop uninstall           # remove only what graphyloop added
 npx graphyloop mcp                 # run the MCP server directly (stdio)
@@ -227,6 +235,7 @@ npx graphyloop mcp                 # run the MCP server directly (stdio)
 | `--harness` | `opencode` / `claude` / `codex` / `cursor` / `all` — default: every detected harness |
 | `--home DIR` | Install into a different home directory (testing, containers) |
 | `--force` | Overwrite existing graphyloop files (previous copies backed up as `*.bak-<timestamp>`) |
+| `--check` | `update` only: report version/file drift and exit without writing |
 | `--skip-agents` / `--skip-workflow` | Skip agents/prompts or AGENTS.md |
 | `--no-config-merge` | Never touch `opencode.json`, `.claude.json`, `config.toml`, `mcp.json` |
 
@@ -261,10 +270,14 @@ model: <your-model>
 ## Updates
 
 ```bash
-npx -y graphyloop@latest install --force   # refresh core + agents from the newest version (backups kept)
+npx -y graphyloop@latest update           # refresh the install in place
+npx graphyloop update --check             # report the drift, write nothing
+npx graphyloop doctor                     # installed core version vs this package
 ```
 
-Re-running plain `npx graphyloop install` is always safe — idempotent, never clobbers your config.
+`update` overwrites graphyloop-owned files (timestamped backup first), repairs a core tree that is missing newer modules, and leaves your config keys, your own plugins and your edited files alone. `--check` prints `up-to-date` / `update-available` / `incomplete` / `not-installed` (add `--json` for a machine-readable answer) without touching anything.
+
+`doctor` prints the installed core version next to the package version — check it first when a graphyloop tool "does not exist" in a harness that is otherwise wired correctly. Re-running plain `npx graphyloop install` is still always safe (idempotent, never clobbers your config); `update` is the same operation with the graphyloop-owned files refreshed.
 
 ## Uninstall
 
@@ -296,9 +309,14 @@ Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and t
 ## Development
 
 ```bash
-npm test          # 50 tests: MCP protocol E2E (in-process + spawned) + engine state durability/concurrency + OpenCode plugin + installer preservation/idempotency + uninstall round-trip
-npm pack          # build the publishable tarball
+npm test              # 105 tests across 7 suites
+npm run test:fast     # everything except the installer/update suites (seconds)
+npm run test:list     # list the suites
+npm run test:secrets  # one suite: engine · secrets · planner · mcp · plugin · install · update
+npm pack              # build the publishable tarball
 ```
+
+Suites are split by area and the runner takes a filter (`node scripts/run-tests.mjs planner mcp`), so iterating on one area does not pay for the installer suite.
 
 **Structure:** `bin/` CLI entry · `lib/` engine + installers + MCP server + detection · `plugin/` OpenCode plugin · `adapter/cli.mjs` graphyloop engine · `agents/` squad sources · `workflow/AGENTS.md` rules · `templates/` per-harness files · `scripts/` test runner + CI smoke · `assets/` logo + diagrams (SVG, light/dark pairs; referenced by absolute URL so npm renders them too, and kept out of the tarball).
 
@@ -324,6 +342,7 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 | Version | Highlights |
 |---|---|
+| **unreleased** | **Wave planner** (`plan_feature`) — "I want an inventory system" becomes contract → **database ∥ backend ∥ frontend ∥ tests** → integration → **test ∥ typecheck ∥ security ∥ performance ∥ review** → gated deploy, and `task_distribute` now enforces it: `wave` + `dependsOn` gate dispatch, `dispatchNow`/`blocked` say what may run, `task_record` reports what a result unblocked · **Supabase + Vercel credentials** — `secrets_status` (masked, never a value), `secrets_set` (chmod 600 store, git-ignored before the first write), `env_sync` (values move file-to-file into `.env.local`, public aliases for public keys only), `preflight` (`db`/`deploy` blockers + gated command plan, executes nothing) · **`graphyloop update [--check]`** — refresh an install in place, repair a core tree missing new modules, keep your config keys; `doctor` now prints the installed core version · `/chadi-waves`, `/chadi-db`, `/chadi-deploy` · Fix: a stale hardcoded tool count in the installer suite made a spawned MCP server hold its stdio pipes on failure, hanging the whole test run instead of reporting it · test suites split per area with a filterable runner (105 tests) |
 | **0.1.3** *(unreleased)* | **MCP tools now run in-process** — the engine moved to `lib/engine.mjs` and is called directly instead of spawning a child process per tool call: **3.8 ms vs 73.7 ms** per call, and a slow call no longer blocks the server · **`memory_forget`** so a wrong memory can be corrected rather than recalled forever · memory search gains recency ranking and a `type` filter · Fix: the task queue grew without bound — settled tasks are capped (`GRAPHYLOOP_MAX_TASKS`, default 500), pending work never dropped · `initialize` echoes the client's protocol version instead of always asserting ours · npm metadata (repository, issues, homepage, keywords, author) · octopus mark + drawn 5-gate workflow diagram · CHANGELOG and contributor docs · 50 tests · a pre-push hook that blocks a push whose suite fails |
 | **0.1.2** | **Fix: MCP tools worked only after a manual init** — the swarm now initializes lazily on the first tool call, so Claude Code / Codex / Cursor work in a fresh project out of the box · **Fix: re-init after `shutdown` erased the whole memory log** · **Fix: parallel agents silently dropped each other's writes** — state is now lock-guarded (measured: 6 of 12 concurrent writes lost before, 12 of 12 kept after) · state moved to `<project>/.graphyloop/` with automatic migration from `.opencode/graphyloop/` · project-root guard extended to the MCP server · crash-safe atomic writes, corrupt-state quarantine, capped memory log · engine input validation (`--flag=value`, unknown agent types, duplicate ids, malformed task payloads, empty queries) · plugin surfaces CLI crashes/timeouts instead of swallowing them · uninstall no longer skips `AGENTS.md` when `opencode.json` is unparsable · `adapter/*.ts` (1.3k unrunnable lines) no longer published or installed · release gate rejects a tag that disagrees with `package.json` · first test coverage for the OpenCode plugin · 25 new tests (44 total) |
 | **0.1.1** | Complete rebrand to the GraphyLoop identity (engine, agents, tool names, config entries) · `graphcrew` agent squad · automatic npm releases via GitHub Actions (tag → test → publish) · copy-paste setup prompt for any AI harness · professional docs, CI matrix (Win/macOS/Linux × Node 20/22/24), AI co-author credits |

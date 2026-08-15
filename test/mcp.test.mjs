@@ -15,11 +15,11 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { CORE_LIB_FILES } from '../lib/install-core.mjs'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const MCP_SERVER = join(REPO_ROOT, 'mcp-server.mjs')
 const ADAPTER_CLI = join(REPO_ROOT, 'adapter', 'cli.mjs')
-const ENGINE = join(REPO_ROOT, 'lib', 'engine.mjs')
 const PKG_VERSION = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')).version
 
 // The tools the contract mandates.
@@ -32,6 +32,11 @@ const EXPECTED_TOOLS = [
   'memory_store',
   'memory_search',
   'memory_forget',
+  'plan_feature',
+  'secrets_status',
+  'secrets_set',
+  'env_sync',
+  'preflight',
   'shutdown',
 ]
 
@@ -133,10 +138,15 @@ before(async () => {
   fakeCli = join(homeDir, '.graphyloop', 'graphyloop', 'cli.mjs')
   mkdirSync(dirname(fakeCli), { recursive: true })
   copyFileSync(ADAPTER_CLI, fakeCli)
-  // The CLI imports ../lib/engine.mjs, so the fake home has to mirror the
-  // installed tree or it dies with ERR_MODULE_NOT_FOUND.
+  // The CLI imports ../lib/engine.mjs, which in turn imports the rest of the
+  // engine modules, so the fake home has to mirror the installed tree or it dies
+  // with ERR_MODULE_NOT_FOUND. The list comes from the installer itself so a new
+  // core module cannot silently break the installed layout.
   mkdirSync(join(homeDir, '.graphyloop', 'lib'), { recursive: true })
-  copyFileSync(ENGINE, join(homeDir, '.graphyloop', 'lib', 'engine.mjs'))
+  for (const name of CORE_LIB_FILES) {
+    copyFileSync(join(REPO_ROOT, 'lib', name), join(homeDir, '.graphyloop', 'lib', name))
+  }
+  copyFileSync(join(REPO_ROOT, 'package.json'), join(homeDir, '.graphyloop', 'package.json'))
 
   // graphyloop CLI refuses memory ops until init; pre-initialize the temp project.
   const init = spawnSync(process.execPath, [fakeCli, 'init'], {
@@ -186,7 +196,7 @@ test('ping returns empty result', { timeout: 15000 }, async () => {
   assert.deepEqual(msg.result, {})
 })
 
-test('tools/list returns the 9 contracted tools with schemas', { timeout: 15000 }, async () => {
+test('tools/list returns every contracted tool with a schema', { timeout: 15000 }, async () => {
   const msg = await rpc('tools/list', {})
   assert.ok(Array.isArray(msg.result.tools))
   assert.equal(msg.result.tools.length, EXPECTED_TOOLS.length, `expected ${EXPECTED_TOOLS.length} tools, got ${msg.result.tools.length}`)
@@ -235,6 +245,77 @@ test('tools/call memory_search without query returns isError (validation)', { ti
 test('tools/call memory_store without content returns isError (validation)', { timeout: 15000 }, async () => {
   const result = await callTool('memory_store', { type: 'event' })
   assert.equal(result.isError, true)
+})
+
+// ---------------------------------------------------------------------------
+// Planning + secrets/deploy tools
+// ---------------------------------------------------------------------------
+
+test('tools/call plan_feature returns a wave plan whose tasks task_distribute accepts', { timeout: 20000 }, async () => {
+  const planned = await callTool('plan_feature', { goal: 'inventory system with stock levels and a dashboard' })
+  assert.equal(planned.isError, false, planned.content[0].text)
+  const plan = JSON.parse(planned.content[0].text)
+  assert.equal(plan.shape, 'fullstack')
+  assert.deepEqual(plan.waves.map((w) => w.name), ['contract', 'builders', 'integration', 'verify'])
+
+  // The output of one tool must be valid input to the next without reshaping.
+  await callTool('agent_spawn', { type: 'data', id: 'plan-data' })
+  await callTool('agent_spawn', { type: 'coder', id: 'plan-coder' })
+  const dist = await callTool('task_distribute', { tasks: JSON.stringify(plan.tasks) })
+  assert.equal(dist.isError, false, dist.content[0].text)
+  const res = JSON.parse(dist.content[0].text)
+  assert.deepEqual(res.dispatchNow, ['w0-contract'], 'only wave 0 is dispatchable')
+  assert.ok(res.blocked.length > 0, 'later waves reported as blocked')
+})
+
+test('tools/call plan_feature without a goal returns isError (validation)', { timeout: 15000 }, async () => {
+  const result = await callTool('plan_feature', {})
+  assert.equal(result.isError, true)
+  assert.match(result.content[0].text, /"goal" is required/)
+})
+
+test('tools/call secrets_set stores a credential and never echoes the value', { timeout: 15000 }, async () => {
+  const value = 'sbp_mcp_service_role_value_abcdef123456'
+  const set = await callTool('secrets_set', { key: 'SUPABASE_SERVICE_ROLE_KEY', value })
+  assert.equal(set.isError, false, set.content[0].text)
+  assert.ok(!set.content[0].text.includes(value), 'raw credential came back over MCP')
+
+  const status = await callTool('secrets_status', { provider: 'supabase' })
+  assert.equal(status.isError, false, status.content[0].text)
+  assert.ok(!status.content[0].text.includes(value), 'secrets_status leaked the value')
+  const data = JSON.parse(status.content[0].text)
+  const key = data.providers[0].keys.find((k) => k.key === 'SUPABASE_SERVICE_ROLE_KEY')
+  assert.equal(key.present, true)
+  assert.equal(key.source, 'store')
+})
+
+test('tools/call secrets_set validates the key name and requires a value', { timeout: 15000 }, async () => {
+  const badKey = await callTool('secrets_set', { key: 'not-a-key', value: 'x' })
+  assert.equal(badKey.isError, true)
+  assert.match(badKey.content[0].text, /UPPER_SNAKE_CASE/)
+
+  const noValue = await callTool('secrets_set', { key: 'VERCEL_TOKEN' })
+  assert.equal(noValue.isError, true)
+  assert.match(noValue.content[0].text, /"value" is required/)
+})
+
+test('tools/call preflight reports blockers and gates without executing anything', { timeout: 15000 }, async () => {
+  const result = await callTool('preflight', { target: 'deploy' })
+  assert.equal(result.isError, false, result.content[0].text)
+  const data = JSON.parse(result.content[0].text)
+  assert.equal(data.ok, false, 'no VERCEL_TOKEN in this project yet')
+  assert.ok(data.blockers.some((b) => b.key === 'VERCEL_TOKEN'))
+  assert.match(data.plan.find((s) => s.id === 'deploy-prod').gate, /approval/i)
+
+  const bad = await callTool('preflight', { target: 'staging' })
+  assert.equal(bad.isError, true)
+  assert.match(bad.content[0].text, /db, deploy, all/)
+})
+
+test('tools/call env_sync rejects a non-env target', { timeout: 15000 }, async () => {
+  const result = await callTool('env_sync', { target: 'config.json' })
+  assert.equal(result.isError, true)
+  assert.match(result.content[0].text, /\.env\*/)
 })
 
 // Regression: the contracted tool set has no init tool, so before lazy init a
