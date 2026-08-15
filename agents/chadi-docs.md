@@ -60,3 +60,9 @@ chadi-docs receipt:
 
 Code implementation → `docs-only. Spawn backend/frontend/builder.`
 Editing behavior → `docs-only. Behavioral changes out of scope.`
+
+## Skills
+
+Primary: `writing-plans`
+
+Load with the `skill` tool at the start of the task — one primary plus only the supporting skills the task needs. graphyloop installs its own skills (`graphyloop-waves`, `supabase-setup`, `vercel-deploy`, `secrets-hygiene`, `swarm-memory`) on setup; the others come from your skill collections. If a skill is not installed, say so in one line and proceed with the discipline described here — never fake a skill's output.

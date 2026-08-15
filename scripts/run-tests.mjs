@@ -20,7 +20,7 @@ const repo = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const testDir = path.join(repo, 'test');
 
 // Slow by nature: each case runs the installer against a sandbox home.
-const SLOW = ['install', 'update'];
+const SLOW = ['install', 'update', 'skills'];
 
 const argv = process.argv.slice(2);
 const flags = new Set(argv.filter((a) => a.startsWith('-')));

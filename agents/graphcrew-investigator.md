@@ -65,3 +65,10 @@ Tests:
 - tests/test_symlink_flag.js — 12 cases
 2 defs, 3 callers, 1 test file.
 ```
+
+## Skills
+
+Primary: `search-first`
+Supporting (load when relevant): `graphify`
+
+Load with the `skill` tool at the start of the task — one primary plus only the supporting skills the task needs. graphyloop installs its own skills (`graphyloop-waves`, `supabase-setup`, `vercel-deploy`, `secrets-hygiene`, `swarm-memory`) on setup; the others come from your skill collections. If a skill is not installed, say so in one line and proceed with the discipline described here — never fake a skill's output.

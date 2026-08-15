@@ -133,3 +133,10 @@ Tests ARE contracts. Write them BEFORE implementation — they define expected b
 ### When to use playwright (only after vitest+jsdom cover logic)
 - **Write playwright tests for**: critical user flows (login, checkout, payment), multi-page navigation, form submission chains, real API integration between front-end and back-end
 - **Never playwright for**: unit logic, component render tests, API route tests — those are vitest+jsdom
+
+## Skills
+
+Primary: `tdd-workflow` · `e2e-testing`
+Supporting (load when relevant): `verification-before-completion`
+
+Load with the `skill` tool at the start of the task — one primary plus only the supporting skills the task needs. graphyloop installs its own skills (`graphyloop-waves`, `supabase-setup`, `vercel-deploy`, `secrets-hygiene`, `swarm-memory`) on setup; the others come from your skill collections. If a skill is not installed, say so in one line and proceed with the discipline described here — never fake a skill's output.

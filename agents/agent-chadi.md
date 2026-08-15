@@ -102,11 +102,16 @@ This replaces serial "read file → read file → search" loops. Context arrives
 
 **Skill pre-load (orchestrator-level — before subagent dispatch):**
 Load relevant skills ONCE at orchestrator level, distill key instructions, and pass to subagents in their dispatch prompt:
-- Build tasks → load `brainstorming` + `tdd-workflow` → pass test contracts + design intent to subagents
-- Auth/security tasks → load `security-review` → pass checklist to implementers
-- UI tasks → load appropriate design skill → pass design spec to frontend
-- Refactors → load `systematic-debugging` if bug, skip otherwise
-This saves one `skill` tool round-trip per subagent (~2-3s each). Subagents that need deeper skill context can still load their own.
+- Multi-layer feature → `graphyloop-waves` (bundled) → pass the contract path + per-lane ownership into every Wave 1 prompt
+- Database work → `supabase-setup` (bundled) → pass the RLS checklist to the data lane
+- Deploy → `vercel-deploy` (bundled) → pass the gate order (preflight → env mirror → migrate → preview → gated prod)
+- Any credential involved → `secrets-hygiene` (bundled) → nobody pastes a key into the chat, nobody prints a value
+- Start/end of the task → `swarm-memory` (bundled) → recall before planning, one entry after
+- Build tasks → `brainstorming` + `tdd-workflow` → pass test contracts + design intent to subagents
+- Auth/security tasks → `security-review` → pass the checklist to implementers
+- UI tasks → `minimalist-ui` / the project's design skill → pass the design spec to frontend
+- Refactors → `systematic-debugging` if bug, skip otherwise
+This saves one `skill` tool round-trip per subagent (~2-3s each). Subagents that need deeper skill context can still load their own — each subagent's `.md` names its primary + supporting skills.
 
 **Auto-sizing by surface area:**
 | Files touched | Squad size | Agents |

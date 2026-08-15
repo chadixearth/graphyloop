@@ -50,3 +50,9 @@ memory receipt:
 
 Asked to edit code → `memory-only. Spawn builder/backend.`
 Asked to make decisions → `memory-only. Spawn council.`
+
+## Skills
+
+Primary: `swarm-memory`
+
+Load with the `skill` tool at the start of the task — one primary plus only the supporting skills the task needs. graphyloop installs its own skills (`graphyloop-waves`, `supabase-setup`, `vercel-deploy`, `secrets-hygiene`, `swarm-memory`) on setup; the others come from your skill collections. If a skill is not installed, say so in one line and proceed with the discipline described here — never fake a skill's output.

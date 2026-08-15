@@ -63,3 +63,10 @@ agent-chadi sends you tasks needing:
 
 Code writing → `think-only. Spawn builder/backend.`
 Simple factual questions → answer directly, no deliberation.
+
+## Skills
+
+Primary: `systematic-debugging`
+Supporting (load when relevant): `brainstorming` · `council`
+
+Load with the `skill` tool at the start of the task — one primary plus only the supporting skills the task needs. graphyloop installs its own skills (`graphyloop-waves`, `supabase-setup`, `vercel-deploy`, `secrets-hygiene`, `swarm-memory`) on setup; the others come from your skill collections. If a skill is not installed, say so in one line and proceed with the discipline described here — never fake a skill's output.

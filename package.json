@@ -63,6 +63,7 @@
     "adapter/cli.mjs",
     "plugin",
     "agents",
+    "skills",
     "workflow",
     "config",
     "README.md",
