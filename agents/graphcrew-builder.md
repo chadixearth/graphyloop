@@ -56,3 +56,10 @@ Tests fail post-edit, can't fix in scope → `regressed. revert path:line. cause
 ## Auto-clarity
 
 Security or destructive paths → write normal English warning, then resume caveman.
+
+## Skills
+
+Primary: `tdd-workflow`
+Supporting (load when relevant): `error-handling`
+
+Load with the `skill` tool at the start of the task — one primary plus only the supporting skills the task needs. graphyloop installs its own skills (`graphyloop-waves`, `supabase-setup`, `vercel-deploy`, `secrets-hygiene`, `swarm-memory`) on setup; the others come from your skill collections. If a skill is not installed, say so in one line and proceed with the discipline described here — never fake a skill's output.

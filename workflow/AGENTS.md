@@ -301,7 +301,26 @@ Enabled set is deliberately small:
   flip it back when the task is done. Tell the user you did it.
 
 # Skills
-Use original installed SKILL.md files. Map: `$HOME/.config/opencode/CHADI_SKILL_SOURCES.md` [OPTIONAL — community scripts; create or skip]. Never fake missing skills. Load via `skill` tool per task — one primary skill plus supporting ones, no blanket preloading.
+
+**Bundled with graphyloop** (installed to `<harness>/skills/` on setup — available immediately, no extra download):
+
+| Skill | Load it when |
+|---|---|
+| `graphyloop-waves` | the request spans layers (db + backend + frontend, or feature + pipeline) — contract-first parallel dispatch |
+| `supabase-setup` | schema, migrations, RLS policies, seeds, typed clients |
+| `vercel-deploy` | preview/production deploys, "works locally, fails on Vercel" |
+| `secrets-hygiene` | any task that needs a key, token or connection string |
+| `swarm-memory` | start and end of every non-trivial task (recall, then record) |
+
+An existing skill of the same name is **never** overwritten by install or update — your copy wins.
+
+**From your own collections** (superpowers and similar — installed separately): `brainstorming`, `systematic-debugging`, `tdd-workflow`, `writing-plans`, `verification-before-completion`, `council`, `security-review`, `e2e-testing`, `error-handling`, `database-migrations`, `postgres-patterns`, `prisma-patterns`, `deployment-patterns`, `github-ops`, `terminal-ops`, `using-git-worktrees`, `requesting-code-review`, `receiving-code-review`, `search-first`, `graphify`, `last30days`, plus any design/media skills you keep.
+
+Rules:
+- Each subagent's `.md` lists its primary + supporting skills — that mapping is the source of truth, not improvisation.
+- Load via the `skill` tool per task: one primary plus only the supporting skills the task needs. No blanket preloading.
+- Use the original installed `SKILL.md` as source of truth. Never fake a missing skill — say it is not installed in one line and proceed with the discipline you do have.
+- Orchestrator-level preload: load a skill ONCE at the driver level, distil the key instructions, and pass them into the dispatch prompt instead of paying a `skill` round-trip inside every subagent.
 
 # LAST30DAYS RESEARCH POLICY
 

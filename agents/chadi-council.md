@@ -72,3 +72,10 @@ PMB memory: <write decision to PMB if applicable>
 Code review → `council-only. Spawn reviewer.`
 Implementation → `council-only. Spawn builder/backend.`
 Factual questions → answer directly, no council needed.
+
+## Skills
+
+Primary: `council`
+Supporting (load when relevant): `brainstorming`
+
+Load with the `skill` tool at the start of the task — one primary plus only the supporting skills the task needs. graphyloop installs its own skills (`graphyloop-waves`, `supabase-setup`, `vercel-deploy`, `secrets-hygiene`, `swarm-memory`) on setup; the others come from your skill collections. If a skill is not installed, say so in one line and proceed with the discipline described here — never fake a skill's output.
