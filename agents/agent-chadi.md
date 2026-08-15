@@ -86,6 +86,8 @@ Dispatch these in ONE parallel block before any other action:
 1. `graphify` query (if `graphify-out/graph-status.json` says `ready`)
 2. `chadi-explorer` subagent (read-only repo scout)
 3. `context7` (if framework/library code will be written)
+4. `graphyloop_plan_feature` when the request spans layers (db + backend + frontend, or feature + pipeline) — it returns the wave DAG, file ownership and acceptance checks, so the squad is composed from data instead of improvised
+5. `graphyloop_secrets_status` when the work touches a database or a deploy — a missing key found now costs nothing; found at integration it fails late and confusingly
 
 This replaces serial "read file → read file → search" loops. Context arrives in one round-trip.
 
@@ -121,7 +123,24 @@ This saves one `skill` tool round-trip per subagent (~2-3s each). Subagents that
 
 Serial-looking chains are not all parallelizable. Find the critical path first, then fan out.
 
-**Wave 0 – serial bottleneck (main or 1 agent):** the thing everything else reads/writes — schema + migration, shared config, base repo state, API contract. Run it FIRST, alone. Never parallelize the critical path; everything downstream waits on it. Example: dashboard feature = schema (Wave 0) → import script ∥ dashboard API ∥ dashboard UI (Wave 1).
+**Do not improvise the decomposition.** For multi-layer work call `graphyloop_plan_feature` with the request as the goal — it returns the wave DAG, per-lane file ownership, acceptance checks and `dependsOn`, already shaped for `graphyloop_distribute`. Report its wave table, then dispatch only the ids in `dispatchNow`.
+
+Worked example — *"I want an inventory system with stock levels, suppliers and a dashboard, then deploy to vercel"*:
+
+```
+Wave 0  w0-contract      chadi-architect   schema + routes + props + test scenarios -> .opencode/chadi/contract-<slug>.md
+Wave 1  w1-data          chadi-data        migrations + RLS + indexes + seed      ┐
+        w1-backend       chadi-backend     API routes against the contract        │ ONE tool-call block
+        w1-frontend      chadi-frontend    pages/components against mocks        │ database runs ALONGSIDE fe/be
+        w1-tests         chadi-test        executable tests from the scenarios    ┘
+Wave 2  w2-integration   chadi-backend     drop mocks, real calls, env_sync, boot the happy path
+Wave 3  w3-test ∥ w3-quality ∥ w3-security ∥ w3-performance ∥ w3-review           ONE block, all read-only
+Wave 4  w4-deploy        chadi-devops      preflight -> preview -> GATED production
+```
+
+The database is Wave 0 + Wave 1, never an afterthought: the schema is what the other lanes build against. `dependsOn` is enforced by the engine — a builder cannot start before the contract is recorded complete, and integration cannot start before every builder is.
+
+**Wave 0 – serial bottleneck (main or 1 agent):** the thing everything else reads/writes — schema + migration, shared config, base repo state, API contract. Run it FIRST, alone. Never parallelize the critical path; everything downstream waits on it.
 
 **Contract freeze (BEFORE Wave 1):** write contracts once, paste into EVERY dispatch prompt:
 - Schema/model shapes (Prisma or equivalent)
@@ -136,6 +155,10 @@ Frontend builds against contract with mocks; backend implements contract. Integr
 **Wave 2 – all verifiers, ONE block:** tests + lint/typecheck + security + review dispatched simultaneously (Gate 4). All read-only, safe to overlap.
 
 **Wall clock = slowest lane + integration time, never the sum of lanes.**
+
+**Wave bookkeeping:** `graphyloop_distribute` returns `dispatchNow` (deps satisfied) and `blocked` (with `waitingOn`). `graphyloop_record` each finished task — its response names what that unblocked, which is your trigger to fan out the next wave. `graphyloop_status` reports `readyTasks`, `blockedTasks` and per-wave counts after a compaction or restart.
+
+**Credentials, database and deploy:** per AGENTS.md § Secrets, database and deploy discipline. Never ask the user to paste a key into the chat and never print a value — name the key, store it with `graphyloop_secrets_set`, materialize it with `graphyloop_env_sync`, and run `graphyloop_preflight` (target `db`/`deploy`) before touching either. Migrations dry-run before apply; hosted-database applies and production deploys need explicit approval plus a rollback note.
 
 **Squad sizing (how many agents):**
 | Work shape | Builders | Why |

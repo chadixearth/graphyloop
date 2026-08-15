@@ -19,6 +19,21 @@
     "agent": "agent-chadi",
     "template": "Use agent-chadi. Do intake, acceptance criteria, discovery, architecture map, risk classification, and PARALLEL_PLAN.md. Use matching skills and available codegraph/context7 tools when relevant. Do not implement yet unless the user already asked to proceed."
   },
+  "chadi-waves": {
+    "description": "Plan a multi-layer feature as parallel waves (contract -> builders -> integration -> verify -> deploy) and dispatch wave 0.",
+    "agent": "agent-chadi",
+    "template": "Use agent-chadi. Call graphyloop_plan_feature with the user's request as the goal. Report the wave table (which lanes run in parallel, what each owns, what gates the deploy), then pass plan.tasks to graphyloop_distribute and dispatch ONLY the tasks it returns in dispatchNow — wave 0 freezes the contract alone. After each result, graphyloop_record it and dispatch whatever that unblocked, all tasks of a wave in ONE tool-call block. Do not let a builder start before the contract file exists."
+  },
+  "chadi-db": {
+    "description": "Set up or migrate the database (Supabase-first): check credentials, plan migrations, dry-run before apply.",
+    "agent": "agent-chadi",
+    "template": "Use agent-chadi. Database setup lane. 1) graphyloop_secrets_status to see which Supabase keys exist — never ask the user to paste a key into the chat; if one is missing, tell them the exact key name and where to get it, then store it with graphyloop_secrets_set. 2) graphyloop_env_sync so the app reads real credentials from its own env file. 3) graphyloop_preflight target=db and clear every blocker. 4) Write schema changes as migration files (never dashboard-only edits), with RLS policies and indexes. 5) Run the dry-run step and show its SQL BEFORE any apply; the apply step needs explicit user approval and a rollback note. Never print a credential value."
+  },
+  "chadi-deploy": {
+    "description": "Ship to Vercel safely: preflight, mirror env keys, preview deploy, then gated production.",
+    "agent": "agent-chadi",
+    "template": "Use agent-chadi. Deploy lane. 1) graphyloop_preflight target=deploy — every blocker must be cleared first (missing VERCEL_TOKEN, no build script, env file not git-ignored). 2) Mirror every runtime env key in the Vercel project; a local .env.local is not deployed. 3) Apply pending database migrations before the app deploy, dry-run first, with a rollback note. 4) Run the local build, then a PREVIEW deployment and verify the real URL. 5) Production deploy only after explicit user approval, and record the rollback command in the report. Never print a credential value."
+  },
   "chadi-audit": {
     "description": "Run testing, security, performance, and final code review without broad implementation.",
     "agent": "agent-chadi",
