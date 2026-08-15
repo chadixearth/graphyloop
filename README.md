@@ -16,7 +16,7 @@
 
 </div>
 
-> **Agent = Model + Harness.** The model thinks; the harness gives it tools, memory, loops, and discipline so it can actually work. **GraphyLoop is the harness layer** — one command wires any AI coding harness with a 24-agent squad, coordinated swarms, persistent memory that survives restarts, and a 5-gate delivery workflow. You keep writing code. GraphyLoop handles coordination.
+> **Agent = Model + Harness.** The model thinks; the harness gives it tools, memory, loops, and discipline so it can actually work. **GraphyLoop is the harness layer** — one command wires any AI coding harness with a 25-agent squad, coordinated swarms, persistent memory that survives restarts, and a 5-gate delivery workflow. You keep writing code. GraphyLoop handles coordination.
 
 ```
 User --> Harness (OpenCode / Claude Code / Codex / Cursor)
@@ -59,7 +59,7 @@ GraphyLoop detects which harnesses you have and wires each one. Then:
 Paste the block below into your AI harness — it installs, verifies, and reports on its own. Raw copy: [`docs/SETUP-PROMPT.md`](docs/SETUP-PROMPT.md).
 
 ```
-You are setting up GraphyLoop (github.com/chadixearth/graphyloop, npm package `graphyloop`) — a one-command agentic workflow kit for AI harnesses: graphyloop swarm + memory engine, a 24-agent squad, a 5-gate delivery workflow, and an MCP server that works in any harness.
+You are setting up GraphyLoop (github.com/chadixearth/graphyloop, npm package `graphyloop`) — a one-command agentic workflow kit for AI harnesses: graphyloop swarm + memory engine, a 25-agent squad, a 5-gate delivery workflow, and an MCP server that works in any harness.
 
 Goal: install it for THIS machine's harness(es), verify the install actually works, and report. Do NOT edit any config file by hand — run only the installer. Do NOT run npm publish, npm login, or anything unrelated.
 
@@ -74,7 +74,7 @@ Steps:
 3. Verify — every applicable check must pass:
    - `npx --yes graphyloop doctor` prints the harness table.
    - Core engine files exist: ~/.graphyloop/graphyloop/cli.mjs , ~/.graphyloop/mcp-server.mjs , ~/.graphyloop/lib/mcp.mjs , ~/.graphyloop/lib/engine.mjs .
-   - OpenCode (if present): ~/.config/opencode/opencode.json contains a plugin entry "./plugins/graphyloop/plugin.js", and ~/.config/opencode/agents/ contains 25 .md files.
+   - OpenCode (if present): ~/.config/opencode/opencode.json contains a plugin entry "./plugins/graphyloop/plugin.js", and ~/.config/opencode/agents/ contains 26 .md files.
    - Claude Code (if present): ~/.claude.json has an mcpServers.graphyloop entry, and ~/.claude/agents/ is populated.
    - Codex (if present): ~/.codex/config.toml contains a [mcp_servers.graphyloop] section.
    - Cursor (if present): ~/.cursor/mcp.json has a "graphyloop" entry.
@@ -88,8 +88,8 @@ Do not ask permission for reversible steps — proceed. Stop only for: Node < 20
 
 | Harness | Agents | Commands | Rules | Tools |
 |---|---|---|---|---|
-| **OpenCode** | 25 agent files | 15 `/chadi-*` commands | AGENTS.md | graphyloop plugin (`graphyloop_*` tools) |
-| **Claude Code** | 25 agent files | 15 `/chadi-*` commands | AGENTS.md | MCP server (`√ Connected`) |
+| **OpenCode** | 26 agent files | 15 `/chadi-*` commands | AGENTS.md | graphyloop plugin (`graphyloop_*` tools) |
+| **Claude Code** | 26 agent files | 15 `/chadi-*` commands | AGENTS.md | MCP server (`√ Connected`) |
 | **Codex** | 15 prompts | 15 prompts | AGENTS.md | MCP server (`enabled`) |
 | **Cursor / Windsurf** | — | — | AGENTS.md | MCP server |
 
@@ -103,7 +103,7 @@ Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a re
 |---|---|
 | 🐝 **Swarm orchestration** | Spawn, distribute, and track agents with a hierarchical swarm topology — zero API keys, state in `<project>/.graphyloop/state.json` |
 | 🧠 **Persistent memory** | Store decisions, patterns, lessons, and events; keyword-search across sessions. Survives restarts and compactions |
-| 🤖 **24-agent squad** | Specialized agents for exploration, backend, frontend, testing, security, review, refactoring, docs, data, performance, and more (see [Squad](#squad-agents)) |
+| 🤖 **25-agent squad** | Specialized agents for exploration, backend, frontend, testing, security, review, refactoring, docs, data, performance, and more (see [Squad](#squad-agents)) |
 | 🛡️ **5-gate delivery workflow** | Classify → Discover → Implement → Verify → Report, with lane-based verification and evidence-first reporting |
 | 🔌 **Universal MCP bridge** | The same graphyloop tools work in Claude Code, Codex, Cursor, Windsurf, OpenCode — any MCP-capable harness |
 | 📋 **15 slash commands** | `chadi-init` · `chadi-fast` · `chadi-review` · `chadi-plan` · `chadi-waves` · `chadi-db` · `chadi-deploy` · `chadi-audit` · `chadi-release` · `chadi-research` · `chadi-confusing` · `chadi-discuss` · `chadi-go` · `chadi-recall` · `chadi-skills` |
@@ -139,7 +139,7 @@ User --> Harness (OpenCode / Claude Code / Codex / Cursor / Windsurf)
         graphyloop engine (adapter/cli.mjs)
         (swarm orchestration + persistent memory, JSON state)
               |
-              +-----> 24-agent squad (explorer, backend, frontend,
+              +-----> 25-agent squad (explorer, backend, frontend,
               |        test, security, reviewer, architect, ...)
               |
               v
@@ -192,7 +192,7 @@ codex mcp list       # look for: graphyloop ... enabled
 |---|---|
 | **Conductor** | `agent-chadi` — the primary agent running the 5-gate workflow |
 | **Exploration** | `chadi-explorer` · `graphcrew-investigator` |
-| **Implementation** | `chadi-backend` · `chadi-frontend` · `graphcrew-builder` · `graphcrew-fixer` · `chadi-refactor` |
+| **Implementation** | `chadi-backend` · `chadi-frontend` · `chadi-integrator` · `graphcrew-builder` · `graphcrew-fixer` · `chadi-refactor` |
 | **Verification** | `chadi-test` · `chadi-quality` · `chadi-reviewer` · `graphcrew-reviewer` |
 | **Security** | `chadi-security` |
 | **Architecture & Planning** | `chadi-architect` · `chadi-think` · `chadi-council` |
@@ -346,7 +346,7 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 | **0.1.3** *(unreleased)* | **MCP tools now run in-process** — the engine moved to `lib/engine.mjs` and is called directly instead of spawning a child process per tool call: **3.8 ms vs 73.7 ms** per call, and a slow call no longer blocks the server · **`memory_forget`** so a wrong memory can be corrected rather than recalled forever · memory search gains recency ranking and a `type` filter · Fix: the task queue grew without bound — settled tasks are capped (`GRAPHYLOOP_MAX_TASKS`, default 500), pending work never dropped · `initialize` echoes the client's protocol version instead of always asserting ours · npm metadata (repository, issues, homepage, keywords, author) · octopus mark + drawn 5-gate workflow diagram · CHANGELOG and contributor docs · 50 tests · a pre-push hook that blocks a push whose suite fails |
 | **0.1.2** | **Fix: MCP tools worked only after a manual init** — the swarm now initializes lazily on the first tool call, so Claude Code / Codex / Cursor work in a fresh project out of the box · **Fix: re-init after `shutdown` erased the whole memory log** · **Fix: parallel agents silently dropped each other's writes** — state is now lock-guarded (measured: 6 of 12 concurrent writes lost before, 12 of 12 kept after) · state moved to `<project>/.graphyloop/` with automatic migration from `.opencode/graphyloop/` · project-root guard extended to the MCP server · crash-safe atomic writes, corrupt-state quarantine, capped memory log · engine input validation (`--flag=value`, unknown agent types, duplicate ids, malformed task payloads, empty queries) · plugin surfaces CLI crashes/timeouts instead of swallowing them · uninstall no longer skips `AGENTS.md` when `opencode.json` is unparsable · `adapter/*.ts` (1.3k unrunnable lines) no longer published or installed · release gate rejects a tag that disagrees with `package.json` · first test coverage for the OpenCode plugin · 25 new tests (44 total) |
 | **0.1.1** | Complete rebrand to the GraphyLoop identity (engine, agents, tool names, config entries) · `graphcrew` agent squad · automatic npm releases via GitHub Actions (tag → test → publish) · copy-paste setup prompt for any AI harness · professional docs, CI matrix (Win/macOS/Linux × Node 20/22/24), AI co-author credits |
-| **0.1.0** | Initial release — one-command install for OpenCode, Claude Code, Codex, Cursor · 24-agent squad · 5-gate workflow · MCP server (8 tools) · persistent memory + swarm engine · zero runtime dependencies |
+| **0.1.0** | Initial release — one-command install for OpenCode, Claude Code, Codex, Cursor · 25-agent squad · 5-gate workflow · MCP server (8 tools) · persistent memory + swarm engine · zero runtime dependencies |
 
 ## Why this exists
 

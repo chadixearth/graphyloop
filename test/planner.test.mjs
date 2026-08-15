@@ -90,6 +90,7 @@ test('every builder depends on the contract, and nothing else depends on a sibli
 test('integration waits for all builders, verification waits for integration', () => {
   const plan = cli(['plan', '--goal', INVENTORY])
   const integration = plan.tasks.find((t) => t.id === 'w2-integration')
+  assert.equal(integration.agent, 'chadi-integrator', 'the join has its own owner, not a builder')
   for (const id of ['w1-data', 'w1-backend', 'w1-frontend', 'w1-tests']) {
     assert.ok(integration.dependsOn.includes(id), `integration must wait for ${id}`)
   }

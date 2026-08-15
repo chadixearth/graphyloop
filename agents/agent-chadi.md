@@ -94,11 +94,11 @@ This replaces serial "read file → read file → search" loops. Context arrives
 **Squad composition (predefined — no improvisation):**
 - **research-squad**: `chadi-explorer` (+ `last30days` for fresh topics; `deep-research` denied — needs exa/firecrawl MCPs, both disabled)
 - **build-squad**: `chadi-explorer` + (`chadi-backend` | `chadi-frontend`) + `chadi-test`
-- **heavy-squad**: `chadi-explorer` + `chadi-architect` + `chadi-backend` + `chadi-frontend` + `chadi-test`, then `chadi-security` + `chadi-reviewer` AFTER implementation (never during)
+- **heavy-squad**: `chadi-explorer` + `chadi-architect` + `chadi-backend` + `chadi-frontend` + `chadi-test`, then `chadi-integrator` for the join, then `chadi-security` + `chadi-reviewer` AFTER implementation (never during)
 - **review-squad**: `graphcrew-reviewer` + `chadi-security` + `chadi-reviewer`
 - **compressed-squad** (context tight): `graphcrew-investigator` + `graphcrew-builder` + `graphcrew-fixer`
 
-**Routing extras:** `chadi-refactor` (cross-file renames, ast-grep), `chadi-quality` (lint/format/typecheck sweep), `chadi-data` (schema/migrations/queries), `chadi-devops` (CI, env, release), `chadi-docs` (docs only), `chadi-performance`, `chadi-council` (ambiguous decisions), `graphcrew-fixer` (single-file error fix — cheaper than builder), `chadi-think` (deep multi-step reasoning), `chadi-vision` (image/screenshot attached — see Image handling policy), `chadi-memory` (durable memory read/write via graphyloop), `chadi-agent-writer` (authoring/editing agent definition files).
+**Routing extras:** `chadi-integrator` (Wave 2 join — swap mocks for real calls, env wiring, local migrations, boot the happy path; the only agent allowed to touch two lanes), `chadi-refactor` (cross-file renames, ast-grep), `chadi-quality` (lint/format/typecheck sweep), `chadi-data` (schema/migrations/queries), `chadi-devops` (CI, env, release), `chadi-docs` (docs only), `chadi-performance`, `chadi-council` (ambiguous decisions), `graphcrew-fixer` (single-file error fix — cheaper than builder), `chadi-think` (deep multi-step reasoning), `chadi-vision` (image/screenshot attached — see Image handling policy), `chadi-memory` (durable memory read/write via graphyloop), `chadi-agent-writer` (authoring/editing agent definition files).
 
 **Skill pre-load (orchestrator-level — before subagent dispatch):**
 Load relevant skills ONCE at orchestrator level, distill key instructions, and pass to subagents in their dispatch prompt:

@@ -5,7 +5,7 @@ coding harness (OpenCode, Claude Code, Codex, Cursor, Windsurf, ...). The AI wil
 install, verify, and report back.
 
 ```
-You are setting up GraphyLoop (github.com/chadixearth/graphyloop, npm package `graphyloop`) — a one-command agentic workflow kit for AI harnesses: graphyloop swarm + memory engine, a 24-agent squad, a 5-gate delivery workflow, and an MCP server that works in any harness.
+You are setting up GraphyLoop (github.com/chadixearth/graphyloop, npm package `graphyloop`) — a one-command agentic workflow kit for AI harnesses: graphyloop swarm + memory engine, a 25-agent squad, a 5-gate delivery workflow, and an MCP server that works in any harness.
 
 Goal: install it for THIS machine's harness(es), verify the install actually works, and report. Do NOT edit any config file by hand — run only the installer. Do NOT run npm publish, npm login, or anything unrelated.
 
@@ -20,7 +20,7 @@ Steps:
 3. Verify — every applicable check must pass:
    - `npx --yes graphyloop doctor` prints the harness table.
    - Core engine files exist: ~/.graphyloop/graphyloop/cli.mjs , ~/.graphyloop/mcp-server.mjs , ~/.graphyloop/lib/mcp.mjs , ~/.graphyloop/lib/engine.mjs .
-   - OpenCode (if present): ~/.config/opencode/opencode.json contains a plugin entry "./plugins/graphyloop/plugin.js", and ~/.config/opencode/agents/ contains 25 .md files.
+   - OpenCode (if present): ~/.config/opencode/opencode.json contains a plugin entry "./plugins/graphyloop/plugin.js", and ~/.config/opencode/agents/ contains 26 .md files.
    - Claude Code (if present): ~/.claude.json has an mcpServers.graphyloop entry, and ~/.claude/agents/ is populated.
    - Codex (if present): ~/.codex/config.toml contains a [mcp_servers.graphyloop] section.
    - Cursor (if present): ~/.cursor/mcp.json has a "graphyloop" entry.
