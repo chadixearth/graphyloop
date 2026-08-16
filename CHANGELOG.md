@@ -4,6 +4,64 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.2.1] — 2026-08-16
+
+### Fixed
+- **`npm run dev` hung a Windows agent session forever.** The shell tool reads a
+  command's stdout until EOF, and EOF only arrives once *every* handle to the
+  pipe's write end is closed — not when the direct child exits. Detaching a dev
+  server with `Start-Process -RedirectStandardOutput <out> -RedirectStandardError
+  <err>` makes PowerShell call `CreateProcess` with `bInheritHandles=TRUE`, which
+  duplicates every inheritable handle of the launching shell into the child, so
+  the server inherited the tool's stdout pipe and held it open for its entire
+  life. The turn printed `PID` and `SERVER_UP` and then never returned; the user
+  had to cancel to get the session back, and the work had in fact already
+  finished. Measured with a self-exiting fixture server: the launcher exited at
+  2.3 s while the caller's stdout EOF only arrived at 21.8 s — the moment the
+  child died. With a real dev server, "21.8 s" is "never".
+  The launcher now writes the redirection into a generated per-port `.cmd`
+  wrapper and starts that with no `-Redirect*` parameter, so PowerShell goes
+  through `ShellExecuteEx`, which creates the process with
+  `bInheritHandles=FALSE`. **EOF lag 19,498 ms → 8 ms**, with the server still
+  answering `200` after the call returns.
+- **The workflow rules recommended the broken pattern.** `workflow/AGENTS.md`
+  called `Start-Process` with both redirects "the ONLY safe detach on Windows …
+  zero pipe inheritance". The redirect parameters do give the child its own std
+  handles, but they do not turn inheritance off. That section now explains the
+  EOF/handle mechanism and points at the shipped launcher.
+- **`server-guard` whitelisted the leak.** `isSafelyDetached()` treated any
+  `Start-Process` with both redirects as already-safe and let it through
+  un-rewritten. That pattern is now blocked with the measured explanation
+  (`-Wait` stays allowed: a foreground run is meant to be waited on).
+- **`-Stop` orphaned servers.** `npm run dev` reaches the listener through
+  intermediate `cmd.exe` shims that are not children of the launched process, so
+  killing the saved PID left the server alive. Stop now kills the saved PIDs as
+  process *trees* (`taskkill /T`) plus any listener on the port, and the launcher
+  records the resolved listener PID (`LISTENER_PID`) next to the wrapper PID in
+  per-port pid files, so two servers in one project no longer overwrite each
+  other's state.
+
+### Added
+- **`server-guard` plugin and `start-server.ps1` now ship with the kit.** Both
+  were documented in the workflow rules but installed by nothing — the rules told
+  agents to use a launcher that did not exist, flagged in-line as "[OPTIONAL —
+  community scripts; create or skip]". `plugin/server-guard/` installs to
+  `<config>/plugins/server-guard/` with the launcher beside it, and the plugin
+  entry is merged into `opencode.json`. Inline server commands (`npm run
+  dev|start|serve|preview`, `node server*.js`, `python -m http.server`) are
+  rewritten into a detached, health-checked launch; ambiguous ones (pnpm/yarn/bun,
+  `.cmd` shims, `--watch`, command chains) are blocked with instructions instead
+  of stalling the turn. Windows-only by design — the launcher is PowerShell and
+  the handle-inheritance trap is a Win32 behaviour, so the plugin installs no
+  hooks elsewhere.
+- The installer now copies **every** `plugin/<name>/` directory rather than only
+  `plugin/graphyloop`, and refreshes a legacy `<config>/scripts/start-server.ps1`
+  when one exists (backup kept) so older setups stop hanging without a manual
+  edit. It never creates that legacy path — the plugin-local copy is canonical.
+- 28 tests for the guard (143 total), including a regression that fails if
+  `Start-Process` in the launcher ever regains a stdio redirect, and coverage of
+  the rewrite, the blocks, the platform gate and the timeout backstop.
+
 ## [0.2.0] — 2026-08-16
 
 ### Added
@@ -181,6 +239,7 @@ bump may still change behaviour.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
+[0.2.1]: https://github.com/chadixearth/graphyloop/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/chadixearth/graphyloop/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/chadixearth/graphyloop/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/chadixearth/graphyloop/compare/v0.1.2...v0.1.3
