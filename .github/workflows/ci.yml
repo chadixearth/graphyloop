@@ -42,10 +42,20 @@ jobs:
           test -d "$SANDBOX/.claude/agents"
           test -f "$SANDBOX/.codex/config.toml"
           test -f "$SANDBOX/.cursor/mcp.json"
+          # DeepSeek Harness: the home patch layer is what mounts the MCP client,
+          # and it must stay a top-level YAML list or dsh fails loud at boot.
+          test -f "$SANDBOX/.dsh/cordis.patch.yml"
+          grep -q "id: graphyloop-mcp" "$SANDBOX/.dsh/cordis.patch.yml"
+          grep -q "@deepseek-ai/dsh-mcp-client" "$SANDBOX/.dsh/cordis.patch.yml"
+          grep -q "^- insert:" "$SANDBOX/.dsh/cordis.patch.yml"
+          test -f "$SANDBOX/.dsh/AGENTS.md"
+          test -f "$SANDBOX/.dsh/skills/graphyloop-squad/SKILL.md"
+          test -f "$SANDBOX/.dsh/graphyloop/agents/agent-chadi.md"
           # Bundled skills must land in both skill roots, or a fresh setup has
           # agents routing on skills that are not there.
           test -f "$SANDBOX/.config/opencode/skills/graphyloop-waves/SKILL.md"
           test -f "$SANDBOX/.claude/skills/secrets-hygiene/SKILL.md"
+          test -f "$SANDBOX/.dsh/skills/swarm-memory/SKILL.md"
           echo "INSTALLER_SMOKE_OK"
       - name: Update refreshes an existing install
         shell: bash
@@ -81,6 +91,8 @@ jobs:
           grep -q 'package/lib/stack.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/lib/planner.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/lib/install-skills.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/install-dsh.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/templates/dsh/skills/graphyloop-squad/SKILL.md' /tmp/graphyloop-files.txt
           grep -q 'package/skills/graphyloop-waves/SKILL.md' /tmp/graphyloop-files.txt
           grep -q 'package/skills/secrets-hygiene/SKILL.md' /tmp/graphyloop-files.txt
           grep -q 'package/agents/chadi-integrator.md' /tmp/graphyloop-files.txt

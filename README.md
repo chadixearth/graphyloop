@@ -19,7 +19,7 @@
 > **Agent = Model + Harness.** The model thinks; the harness gives it tools, memory, loops, and discipline so it can actually work. **GraphyLoop is the harness layer** — one command wires any AI coding harness with a 25-agent squad, coordinated swarms, persistent memory that survives restarts, and a 5-gate delivery workflow. You keep writing code. GraphyLoop handles coordination.
 
 ```
-User --> Harness (OpenCode / Claude Code / Codex / Cursor)
+User --> Harness (OpenCode / Claude Code / Codex / Cursor / DeepSeek Harness)
               |
               +---- MCP server ----+---- graphyloop engine (swarm + memory)
               |                    +---- squad agents (24 chadi/graphcrew)
@@ -34,7 +34,7 @@ User --> Harness (OpenCode / Claude Code / Codex / Cursor)
 
 ## Quick Start
 
-**Prerequisites:** Node.js ≥ 20 (npm/npx included) and at least one AI harness you want to wire up (OpenCode, Claude Code, Codex, Cursor, Windsurf — or none yet; GraphyLoop covers that too).
+**Prerequisites:** Node.js ≥ 20 (npm/npx included) and at least one AI harness you want to wire up (OpenCode, Claude Code, Codex, Cursor, Windsurf, DeepSeek Harness — or none yet; GraphyLoop covers that too).
 
 ```bash
 npx graphyloop install
@@ -48,11 +48,11 @@ GraphyLoop detects which harnesses you have and wires each one. Then:
 
 | Install path | What you get | Files in your workspace |
 |---|---|---|
-| `npx graphyloop install` | Everything, for every harness detected | **Zero** — everything lives in your home config (`~/.graphyloop/`, `~/.config/opencode/`, `~/.claude/`, `~/.codex/`, `~/.cursor/`) |
+| `npx graphyloop install` | Everything, for every harness detected | **Zero** — everything lives in your home config (`~/.graphyloop/`, `~/.config/opencode/`, `~/.claude/`, `~/.codex/`, `~/.cursor/`, `~/.dsh/`) |
 | `npx graphyloop install --harness opencode` | One harness only | Zero |
 | `git clone` + `node setup.mjs` | OpenCode-only, no npm needed | Zero (repo clone aside) |
 
-> **Fresh machine?** No harness configs yet → GraphyLoop installs all four automatically, so you are ready no matter which harness you open next. `--harness all` forces all four; `--harness <name>` targets one.
+> **Fresh machine?** No harness configs yet → GraphyLoop installs all five automatically, so you are ready no matter which harness you open next. `--harness all` forces all five; `--harness <name>` targets one.
 
 ### Setup with any AI assistant (copy-paste)
 
@@ -66,7 +66,7 @@ Goal: install it for THIS machine's harness(es), verify the install actually wor
 Steps:
 1. Prerequisites:
    - Run `node --version` — must be 20 or newer. If older, tell the user to install Node.js 20+ and stop there.
-   - Detect which harnesses exist on this machine (check for any of): ~/.config/opencode/  (OpenCode), ~/.claude.json or ~/.claude/  (Claude Code), ~/.codex/  (Codex), ~/.cursor/  (Cursor). On Windows, ~ = %USERPROFILE%.
+   - Detect which harnesses exist on this machine (check for any of): ~/.config/opencode/  (OpenCode), ~/.claude.json or ~/.claude/  (Claude Code), ~/.codex/  (Codex), ~/.cursor/  (Cursor), ~/.dsh/ or $DSH_HOME  (DeepSeek Harness / `dsh`). On Windows, ~ = %USERPROFILE%.
 2. Install:
    - Any harness detected:  npx --yes graphyloop install
    - None detected (fresh machine):  npx --yes graphyloop install --harness all
@@ -78,8 +78,9 @@ Steps:
    - Claude Code (if present): ~/.claude.json has an mcpServers.graphyloop entry, and ~/.claude/agents/ is populated.
    - Codex (if present): ~/.codex/config.toml contains a [mcp_servers.graphyloop] section.
    - Cursor (if present): ~/.cursor/mcp.json has a "graphyloop" entry.
+   - DeepSeek Harness (if present): ~/.dsh/cordis.patch.yml contains a row `id: graphyloop-mcp` naming '@deepseek-ai/dsh-mcp-client', ~/.dsh/AGENTS.md exists, and ~/.dsh/skills/ holds graphyloop-squad. Optional deeper check: `dsh --profile headless --dump-config` prints that row. In dsh the tools are namespaced — call them as mcp__graphyloop__<name> (e.g. mcp__graphyloop__swarm_state).
    - If any check fails: re-run the install with --force (automatic backups) and re-verify. Still failing? Report the exact error and stop.
-4. Wrap up: tell the user to RESTART their harness (close/reopen the terminal or editor), open a real project (not their home directory), and ask the agent to run /chadi-init. Give a one-line summary of what was installed.
+4. Wrap up: tell the user to RESTART their harness (close/reopen the terminal or editor), open a real project (not their home directory), and ask the agent to run /chadi-init. In the DeepSeek Harness there are no slash commands: ask the agent to load the `graphyloop-squad` skill instead. Give a one-line summary of what was installed.
 
 Do not ask permission for reversible steps — proceed. Stop only for: Node < 20, an install failure, or a prompt you cannot answer.
 ```
@@ -92,8 +93,16 @@ Do not ask permission for reversible steps — proceed. Stop only for: Node < 20
 | **Claude Code** | 26 agent files | 15 `/chadi-*` commands | AGENTS.md | MCP server (`√ Connected`) |
 | **Codex** | 15 prompts | 15 prompts | AGENTS.md | MCP server (`enabled`) |
 | **Cursor / Windsurf** | — | — | AGENTS.md | MCP server |
+| **DeepSeek Harness** (`dsh`) | 26 role prompts + `graphyloop-squad` skill | — (dsh commands are plugins) | AGENTS.md | MCP server (`mcp__graphyloop__*`) |
 
 Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a real install + MCP handshake smoke on every combination.
+
+In `dsh` the tools are namespaced by the MCP bridge, so they are called
+`mcp__graphyloop__plan_feature`, `mcp__graphyloop__memory_search`, and so on. dsh
+has no agent files and no file-based slash commands — agents are cordis
+compositions, commands are plugins — so the squad installs as a prompt library
+(`~/.dsh/graphyloop/{agents,commands}`) and the `graphyloop-squad` skill teaches
+the conductor to delegate with dsh's own `subagent` tool.
 
 ---
 
@@ -105,7 +114,7 @@ Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a re
 | 🧠 **Persistent memory** | Store decisions, patterns, lessons, and events; keyword-search across sessions. Survives restarts and compactions |
 | 🤖 **25-agent squad** | Specialized agents for exploration, backend, frontend, testing, security, review, refactoring, docs, data, performance, and more (see [Squad](#squad-agents)) |
 | 🛡️ **5-gate delivery workflow** | Classify → Discover → Implement → Verify → Report, with lane-based verification and evidence-first reporting |
-| 🔌 **Universal MCP bridge** | The same graphyloop tools work in Claude Code, Codex, Cursor, Windsurf, OpenCode — any MCP-capable harness |
+| 🔌 **Universal MCP bridge** | The same graphyloop tools work in Claude Code, Codex, Cursor, Windsurf, OpenCode, DeepSeek Harness — any MCP-capable harness |
 | 📋 **15 slash commands** | `chadi-init` · `chadi-fast` · `chadi-review` · `chadi-plan` · `chadi-waves` · `chadi-db` · `chadi-deploy` · `chadi-audit` · `chadi-release` · `chadi-research` · `chadi-confusing` · `chadi-discuss` · `chadi-go` · `chadi-recall` · `chadi-skills` |
 | 🌊 **Wave planner** | One call turns "I want an inventory system" into contract → **database ∥ backend ∥ frontend ∥ tests** → integration → **test ∥ typecheck ∥ security ∥ performance ∥ review** → gated deploy, with file ownership and dependencies the engine enforces |
 | 🔑 **Supabase + Vercel credentials** | Store keys once per project (chmod 600, git-ignored before the first write), sync them into the env file the framework reads, and preflight database/deploy work. Values are never returned to the model |
@@ -131,7 +140,7 @@ Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a re
 <summary><strong>Architecture overview</strong></summary>
 
 ```
-User --> Harness (OpenCode / Claude Code / Codex / Cursor / Windsurf)
+User --> Harness (OpenCode / Claude Code / Codex / Cursor / Windsurf / DeepSeek Harness)
               |
               v
         MCP bridge (15 graphyloop tools)  <----  OpenCode plugin (graphyloop_* tools)
@@ -222,7 +231,7 @@ Plus: an internal-decision policy (no bouncing reversible decisions back), shell
 ## CLI Reference
 
 ```
-npx graphyloop install [--harness opencode|claude|codex|cursor|all]
+npx graphyloop install [--harness opencode|claude|codex|cursor|dsh|all]
                        [--force] [--skip-agents] [--skip-workflow]
                        [--no-config-merge] [--config-dir DIR] [--graphyloop-dir DIR]
 npx graphyloop update [--check]     # refresh an existing install in place
@@ -234,12 +243,12 @@ npx graphyloop mcp                 # run the MCP server directly (stdio)
 
 | Flag | Meaning |
 |---|---|
-| `--harness` | `opencode` / `claude` / `codex` / `cursor` / `all` — default: every detected harness |
-| `--home DIR` | Install into a different home directory (testing, containers) |
+| `--harness` | `opencode` / `claude` / `codex` / `cursor` / `dsh` / `all` — default: every detected harness |
+| `--home DIR` | Install into a different home directory (testing, containers). Also wins over `$DSH_HOME`, so a sandboxed run cannot reach a real harness home |
 | `--force` | Overwrite existing graphyloop files (previous copies backed up as `*.bak-<timestamp>`) |
 | `--check` | `update` only: report version/file drift and exit without writing |
 | `--skip-agents` / `--skip-workflow` | Skip agents/prompts or AGENTS.md |
-| `--no-config-merge` | Never touch `opencode.json`, `.claude.json`, `config.toml`, `mcp.json` |
+| `--no-config-merge` | Never touch `opencode.json`, `.claude.json`, `config.toml`, `mcp.json`, `cordis.patch.yml` |
 
 **Safety guarantees** (all covered by tests):
 
@@ -265,7 +274,7 @@ model: <your-model>
 
 **Default agent (OpenCode)** — setup sets `default_agent: agent-chadi` only when you don't have one. Change it any time.
 
-**Skills** — five skills install with the squad, so a fresh setup is usable immediately: `graphyloop-waves` (contract-first parallel dispatch), `supabase-setup` (schema, RLS, migration order), `vercel-deploy` (gated deploy + rollback), `secrets-hygiene` (credential handling), `swarm-memory` (recall before planning, record after). They land in `~/.config/opencode/skills/` and `~/.claude/skills/`.
+**Skills** — five skills install with the squad, so a fresh setup is usable immediately: `graphyloop-waves` (contract-first parallel dispatch), `supabase-setup` (schema, RLS, migration order), `vercel-deploy` (gated deploy + rollback), `secrets-hygiene` (credential handling), `swarm-memory` (recall before planning, record after). They land in `~/.config/opencode/skills/`, `~/.claude/skills/` and `~/.dsh/skills/` (where the DeepSeek Harness also gets `graphyloop-squad`, its stand-in for the agent files and slash commands dsh does not have).
 
 An existing skill of the same name is **never** overwritten — not by `install --force`, not by `update`. Your copy wins, always.
 
@@ -303,6 +312,8 @@ Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and t
 | "graphyloop skipped: not a project root" | Open a real project — the engine deliberately refuses home/system directories |
 | MCP server not showing in Claude Code | `claude mcp list`; if missing, re-run install and restart Claude Code |
 | Codex does not load the server | Check `~/.codex/config.toml` has `[mcp_servers.graphyloop]`; restart codex |
+| dsh does not show the tools | `dsh --profile headless --dump-config` should print the `graphyloop-mcp` row; the tools are namespaced as `mcp__graphyloop__*`, not bare names |
+| dsh fails at boot after an edit to `cordis.patch.yml` | The file must stay a top-level YAML array — dsh fails loud rather than skipping a patch it cannot parse. Restore the `*.bak-<timestamp>` copy next to it |
 | Re-running setup "skips" files | Normal — that is the preserve-your-config behavior. Use `--force` to refresh (backups are made first) |
 | Config merge warnings about `opencode.jsonc` | OpenCode gives `.jsonc` precedence; review it for the plugin/commands keys |
 | I edited an agent and uninstall kept it | Intended — uninstall only removes byte-identical copies |
@@ -315,7 +326,7 @@ Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and t
 ## Development
 
 ```bash
-npm test              # 143 tests across 9 suites
+npm test              # 157 tests across 10 suites
 npm run test:fast     # everything except the installer/update suites (seconds)
 npm run test:list     # list the suites
 npm run test:secrets  # secrets suite only
@@ -348,6 +359,7 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 | Version | Highlights |
 |---|---|
+| **unreleased** | **DeepSeek Harness (`dsh`) support** — `install` now wires dsh too, through its home-level patch layer (`$DSH_HOME/cordis.patch.yml`): one `insert` row mounting `@deepseek-ai/dsh-mcp-client` at `~/.graphyloop/mcp-server.mjs`, which applies to every profile, hot-reloads, and needs no pnpm step. Tools arrive namespaced as `mcp__graphyloop__*` · `$DSH_HOME/AGENTS.md` for the 5-gate rules, the five skills in `$DSH_HOME/skills`, and — because dsh has no agent files and no file-based slash commands — the squad as a prompt library plus a `graphyloop-squad` skill that delegates through dsh's own `subagent` tool · `skills_status` now reads the dsh and `~/.agents` skill roots · the patch layer stays the user's file: append-only, backed up first, comments and `!!js` expressions untouched, uninstall content-matched · 14 new tests (157 total), verified against `@deepseek-ai/dsh` 0.1.0-rc.6 including dsh's own MCP SDK and tool-schema gate |
 | **0.2.1** | **Fix: `npm run dev` no longer hangs a Windows agent session forever.** The shell tool reads stdout until EOF, and EOF needs every handle to the pipe's write end closed — `Start-Process -RedirectStandardOutput/-RedirectStandardError` calls `CreateProcess` with `bInheritHandles=TRUE`, so the detached dev server inherited the tool's pipe and held it for its whole life. The workflow rules had recommended exactly that pattern as "the only safe detach". Measured with a self-exiting fixture: the launcher exited at 2.3 s, the caller's stdout EOF only arrived at 21.8 s — when the server died; with a real dev server, never · **`server-guard` plugin + `start-server.ps1` now ship with the kit** (they were documented in the rules but never installed): inline `npm run dev`/`node server.js`/`python -m http.server` are rewritten into a launcher that redirects inside a generated `.cmd` and starts it via ShellExecuteEx (`bInheritHandles=FALSE`) — EOF lag **19,498 ms → 8 ms**, server still serving after the call returns · `-Stop` now kills the whole process tree (npm's grandchildren survived a plain PID kill) and pid files are per-port · `Start-Process` with stdio redirects and no `-Wait` is blocked instead of whitelisted · 28 new tests (143 total) |
 | **0.2.0** | **Bundled skills** — `graphyloop-waves`, `supabase-setup`, `vercel-deploy`, `secrets-hygiene`, `swarm-memory` install with the squad, so a fresh setup is usable immediately; a skill you already have is never overwritten, and `skills_status` reports what is actually present · **`chadi-integrator`**, the missing owner of the wave-2 join, with an explicit contract-drift policy · **Wave planner** (`plan_feature`) — "I want an inventory system" becomes contract → **database ∥ backend ∥ frontend ∥ tests** → integration → **test ∥ typecheck ∥ security ∥ performance ∥ review** → gated deploy, and `task_distribute` now enforces it: `wave` + `dependsOn` gate dispatch, `dispatchNow`/`blocked` say what may run, `task_record` reports what a result unblocked · **Supabase + Vercel credentials** — `secrets_status` (masked, never a value), `secrets_set` (chmod 600 store, git-ignored before the first write), `env_sync` (values move file-to-file into `.env.local`, public aliases for public keys only), `preflight` (`db`/`deploy` blockers + gated command plan, executes nothing) · **`graphyloop update [--check]`** — refresh an install in place, repair a core tree missing new modules, keep your config keys; `doctor` now prints the installed core version · `/chadi-waves`, `/chadi-db`, `/chadi-deploy` · Fix: a stale hardcoded tool count in the installer suite made a spawned MCP server hold its stdio pipes on failure, hanging the whole test run instead of reporting it · test suites split per area with a filterable runner (115 tests) |
 | **0.1.3 / 0.1.4** | **MCP tools now run in-process** — the engine moved to `lib/engine.mjs` and is called directly instead of spawning a child process per tool call: **3.8 ms vs 73.7 ms** per call, and a slow call no longer blocks the server · **`memory_forget`** so a wrong memory can be corrected rather than recalled forever · memory search gains recency ranking and a `type` filter · Fix: the task queue grew without bound — settled tasks are capped (`GRAPHYLOOP_MAX_TASKS`, default 500), pending work never dropped · `initialize` echoes the client's protocol version instead of always asserting ours · npm metadata (repository, issues, homepage, keywords, author) · octopus mark + drawn 5-gate workflow diagram · CHANGELOG and contributor docs · 50 tests · a pre-push hook that blocks a push whose suite fails |
