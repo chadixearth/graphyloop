@@ -87,6 +87,26 @@ and `blocked` with `waitingOn` for what may not. Respect it — a lane dispatche
 early is the drift you will spend the integration wave undoing. The
 `graphyloop-waves` skill has the full protocol.
 
+## Which bundled skill for which task
+
+graphyloop installs these into `$DSH_HOME/skills` — load the matching one before
+delegating, and pass its checklist into the `subagent` prompt instead of paying a
+skill load inside every worker:
+
+| Task | Skill |
+|---|---|
+| Layered feature, parallel lanes | `graphyloop-waves` |
+| Interface two lanes share | `api-contract-design` |
+| Endpoint, server action, webhook, upload | `api-hardening` |
+| Client code rendering user data, tokens, env vars, third-party scripts | `frontend-security` |
+| Keyboard / screen-reader / WCAG work | `web-accessibility` |
+| Slow page, bundle growth, vitals regression | `web-performance` |
+| New dependency, lockfile diff, CVE alert | `dependency-audit` |
+| Schema, RLS, migrations | `supabase-setup` |
+| Deploy, rollback | `vercel-deploy` |
+| Any key or token in scope | `secrets-hygiene` |
+| Start and end of a task | `swarm-memory` |
+
 ## Report honestly
 
 Evidence, not narration: the command you ran, its output, what it proves. dsh's

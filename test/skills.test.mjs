@@ -15,6 +15,7 @@ import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { bundledSkills, installSkills, skillFiles } from '../lib/install-skills.mjs'
+import { GRAPHYLOOP_SKILLS, STATIC_GRAPHYLOOP_SKILLS, REFERENCED_SKILLS } from '../lib/engine.mjs'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const BIN = join(REPO_ROOT, 'bin', 'graphyloop.mjs')
@@ -66,6 +67,55 @@ test('the squad workflow references every bundled skill by name', () => {
   for (const name of bundledSkills()) {
     assert.ok(haystack.includes(name), `${name} is bundled but no agent or rule file mentions it`)
   }
+})
+
+// The installed core cannot read skills/ (it runs from ~/.graphyloop), so the
+// engine carries a static fallback list. A skill added to the package but not to
+// that list installs fine and then reports as "not bundled" at runtime — invisible
+// until an agent asks.
+test('the engine static fallback list matches what the package actually ships', () => {
+  assert.deepEqual(
+    STATIC_GRAPHYLOOP_SKILLS,
+    bundledSkills(),
+    'STATIC_GRAPHYLOOP_SKILLS (lib/engine.mjs) is out of sync with skills/'
+  )
+  assert.deepEqual(GRAPHYLOOP_SKILLS, bundledSkills(), 'GRAPHYLOOP_SKILLS resolved from the repo tree must match skills/')
+})
+
+// The drift this guards against shipped once already: agents named skills
+// (design-taste-frontend, api-connector-builder, security-scan, …) that were
+// neither bundled nor listed as referenced, so skills_status answered
+// "referenced.missing: []" while subagents were told to load skills that existed
+// nowhere on the machine. Every name an agent routes on must be accounted for.
+test('every skill an agent routes on is either bundled or tracked as referenced', () => {
+  const known = new Set([...GRAPHYLOOP_SKILLS, ...REFERENCED_SKILLS])
+  const stackSpecific = /-security$|-patterns$/ // django-security, mysql-patterns: conditional on the project stack
+  const unknown = new Map()
+
+  for (const file of readdirSync(join(REPO_ROOT, 'agents')).filter((f) => f.endsWith('.md'))) {
+    const text = readFileSync(join(REPO_ROOT, 'agents', file), 'utf8')
+    for (const line of text.split(/\r?\n/)) {
+      if (!/^(Primary:|Supporting \(load when relevant\):)/.test(line)) continue
+      for (const [, name] of line.matchAll(/`([a-z][a-z0-9-]+)`/g)) {
+        if (known.has(name) || stackSpecific.test(name)) continue
+        if (!unknown.has(name)) unknown.set(name, `${file}: ${line.trim()}`)
+      }
+    }
+  }
+  assert.deepEqual(
+    [...unknown.keys()],
+    [],
+    `untracked skills in agent Primary/Supporting lines — bundle them or add to REFERENCED_SKILLS:\n${[...unknown.values()].join('\n')}`
+  )
+})
+
+test('bundled and referenced skill names never overlap, and both lists are sorted and unique', () => {
+  for (const [label, list] of [['GRAPHYLOOP_SKILLS', GRAPHYLOOP_SKILLS], ['REFERENCED_SKILLS', REFERENCED_SKILLS]]) {
+    assert.deepEqual(list, [...list].sort(), `${label} must stay sorted`)
+    assert.equal(new Set(list).size, list.length, `${label} has a duplicate`)
+  }
+  const overlap = REFERENCED_SKILLS.filter((n) => GRAPHYLOOP_SKILLS.includes(n))
+  assert.deepEqual(overlap, [], 'a skill cannot be both bundled and "bring your own"')
 })
 
 // ---------------------------------------------------------------------------

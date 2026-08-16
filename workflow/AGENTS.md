@@ -315,6 +315,12 @@ Enabled set is deliberately small:
 | Skill | Load it when |
 |---|---|
 | `graphyloop-waves` | the request spans layers (db + backend + frontend, or feature + pipeline) — contract-first parallel dispatch |
+| `api-contract-design` | an interface two lanes share — freeze shapes, status codes, error envelope, pagination before coding |
+| `api-hardening` | any endpoint, server action, webhook, upload or worker — per-route authz, IDOR, validation, rate limits, SSRF |
+| `frontend-security` | client code that renders user data, stores a token, adds an env var or a third-party script — XSS sinks, CSP, leakage |
+| `web-accessibility` | forms, dialogs, menus, tables, or any keyboard / screen-reader / WCAG requirement |
+| `web-performance` | slow page, bundle growth, LCP/INP/CLS/TTFB regression — baseline, fix, prove |
+| `dependency-audit` | adding a dependency, a lockfile diff, a CVE/Dependabot alert — reachability over advisory count |
 | `supabase-setup` | schema, migrations, RLS policies, seeds, typed clients |
 | `vercel-deploy` | preview/production deploys, "works locally, fails on Vercel" |
 | `secrets-hygiene` | any task that needs a key, token or connection string |
@@ -322,7 +328,9 @@ Enabled set is deliberately small:
 
 An existing skill of the same name is **never** overwritten by install or update — your copy wins.
 
-**From your own collections** (superpowers and similar — installed separately): `brainstorming`, `systematic-debugging`, `tdd-workflow`, `writing-plans`, `verification-before-completion`, `council`, `security-review`, `e2e-testing`, `error-handling`, `database-migrations`, `postgres-patterns`, `prisma-patterns`, `deployment-patterns`, `github-ops`, `terminal-ops`, `using-git-worktrees`, `requesting-code-review`, `receiving-code-review`, `search-first`, `graphify`, `last30days`, plus any design/media skills you keep.
+**From your own collections** (superpowers and similar — installed separately): `brainstorming`, `systematic-debugging`, `tdd-workflow`, `writing-plans`, `verification-before-completion`, `council`, `security-review`, `security-scan`, `e2e-testing`, `error-handling`, `database-migrations`, `postgres-patterns`, `prisma-patterns`, `deployment-patterns`, `github-ops`, `terminal-ops`, `using-git-worktrees`, `finishing-a-development-branch`, `requesting-code-review`, `receiving-code-review`, `search-first`, `graphify`, `last30days`, `design-taste-frontend`, `minimalist-ui`, `high-end-visual-design`, `image-to-code`, `redesign-existing-projects`, `api-connector-builder`, `benchmark-optimization-loop`, plus any stack-specific ones your agents name (`django-security`, `laravel-security`, `mysql-patterns`, …).
+
+Call `skills_status` to see which of these are actually on this machine — bundled and referenced are reported separately, so a gap is a one-line statement instead of a faked skill.
 
 Rules:
 - Each subagent's `.md` lists its primary + supporting skills — that mapping is the source of truth, not improvisation.
