@@ -47,13 +47,28 @@ jobs:
       - name: Test suite (gate)
         run: node scripts/run-tests.mjs
 
-      - name: Check NPM_TOKEN presence
+      - name: Check NPM_TOKEN presence and validity
         id: tokencheck
         run: |
-          if [ -n "$NODE_AUTH_TOKEN" ]; then
-            echo "present=yes" >> "$GITHUB_OUTPUT"
-          else
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
             echo "present=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "present=yes" >> "$GITHUB_OUTPUT"
+          # Presence is not permission. A read-only or wrongly scoped granular
+          # token authenticates for reads and then fails `npm publish` with a bare
+          # `E404 PUT .../graphyloop` — which reads like "the package is missing"
+          # and sent the v0.2.1 release down a dead end. Say what is actually
+          # wrong, here, before the publish step runs.
+          if ! WHO=$(npm whoami 2>&1); then
+            echo "::error::NPM_TOKEN is not usable: npm whoami failed ($WHO). Mint a granular token with read+write on the graphyloop package (or a classic Automation token) and update the NPM_TOKEN secret."
+            exit 1
+          fi
+          echo "authenticated as: $WHO"
+          if ! ACCESS=$(npm access list packages "$WHO" 2>&1); then
+            echo "::warning::could not read package permissions for $WHO ($ACCESS) — continuing, publish will be the real test"
+          else
+            echo "$ACCESS" | grep -q 'graphyloop' || echo "::warning::$WHO has no listed permission on graphyloop; publish will likely fail with E404"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
