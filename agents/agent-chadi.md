@@ -109,6 +109,12 @@ Load relevant skills ONCE at orchestrator level, distill key instructions, and p
 - Deploy → `vercel-deploy` (bundled) → pass the gate order (preflight → env mirror → migrate → preview → gated prod)
 - Any credential involved → `secrets-hygiene` (bundled) → nobody pastes a key into the chat, nobody prints a value
 - Start/end of the task → `swarm-memory` (bundled) → recall before planning, one entry after
+- Any endpoint / auth surface / webhook / upload → `api-hardening` (bundled) → pass the per-route ownership check + boundary validation rule to the backend lane
+- Interface consumed by another lane → `api-contract-design` (bundled) → freeze the shape at Wave 0, hand the same file to backend, frontend and tests
+- UI that renders user data, stores a token, or adds a third-party script → `frontend-security` (bundled) → pass the sink + storage + CSP rules to the frontend lane
+- Keyboard / screen-reader / compliance UI → `web-accessibility` (bundled) → pass the focus + naming + verification checklist
+- "It's slow" / bundle growth / vitals regression → `web-performance` (bundled) → baseline first, then one fix at a time
+- New dependency, lockfile diff, CVE alert → `dependency-audit` (bundled) → reachability before advisory count
 - Build tasks → `brainstorming` + `tdd-workflow` → pass test contracts + design intent to subagents
 - Auth/security tasks → `security-review` → pass the checklist to implementers
 - UI tasks → `minimalist-ui` / the project's design skill → pass the design spec to frontend
