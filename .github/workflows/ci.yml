@@ -100,7 +100,15 @@ jobs:
           grep -q 'package/plugin/graphyloop/plugin.js' /tmp/graphyloop-files.txt
           grep -q 'package/adapter/cli.mjs' /tmp/graphyloop-files.txt
           # adapter/*.ts is an unrunnable design reference — it must never ship.
-          if grep -q '\.ts$' /tmp/graphyloop-files.txt; then
-            echo "TARBALL_HAS_TS:"; grep '\.ts$' /tmp/graphyloop-files.txt; exit 1
+          # Scoped to adapter/ on purpose: bundled skills legitimately carry .ts /
+          # .tsx example snippets as documentation, and a repo-wide .ts ban fails
+          # on those instead of on the thing this guard protects.
+          if grep -qE '^package/adapter/.*\.ts$' /tmp/graphyloop-files.txt; then
+            echo "TARBALL_HAS_ADAPTER_TS:"; grep -E '^package/adapter/.*\.ts$' /tmp/graphyloop-files.txt; exit 1
+          fi
+          # Compiled Python bytecode is machine- and version-specific junk: it must
+          # never reach a user's install (it also cost ~1.5 MB of the tarball once).
+          if grep -qE '\.pyc$|__pycache__/' /tmp/graphyloop-files.txt; then
+            echo "TARBALL_HAS_PYCACHE:"; grep -E '\.pyc$|__pycache__/' /tmp/graphyloop-files.txt | head -5; exit 1
           fi
           echo "TARBALL_OK"
