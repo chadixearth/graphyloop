@@ -102,6 +102,8 @@ This replaces serial "read file → read file → search" loops. Context arrives
 
 **Skill pre-load (orchestrator-level — before subagent dispatch):**
 Load relevant skills ONCE at orchestrator level, distill key instructions, and pass to subagents in their dispatch prompt:
+- Delegation → `cavecrew` (when to spawn investigator/builder/reviewer, context-saving compressed output)
+- Communication modes → `caveman` / `caveman-help` (mode reference); commits → `caveman-commit`; review comments → `caveman-review`
 - Multi-layer feature → `graphyloop-waves` (bundled) → pass the contract path + per-lane ownership into every Wave 1 prompt
 - Database work → `supabase-setup` (bundled) → pass the RLS checklist to the data lane
 - Deploy → `vercel-deploy` (bundled) → pass the gate order (preflight → env mirror → migrate → preview → gated prod)
