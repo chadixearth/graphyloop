@@ -119,7 +119,7 @@ bump may still change behaviour.
   the installed copy, and leaves a parsable `[]` behind when nothing else remains.
 - `--home <dir>` overrides `$DSH_HOME`, so a sandboxed or CI install can never
   reach a real harness home.
-- 14 new tests (`test/dsh.test.mjs`), 157 total. Verified against
+- 17 new tests (`test/dsh.test.mjs` plus the skill drift guards), 160 total. Verified against
   `@deepseek-ai/dsh` 0.1.0-rc.6: `dsh --dump-config` composes the row from the
   installed patch layer, and dsh's own MCP SDK plus its tool-schema gate
   (`assertObjectJsonSchema` / `assertSupportedJsonSchema` / `jsonSchemaToTs`)
