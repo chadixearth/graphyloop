@@ -4,6 +4,51 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [Unreleased]
+
+### Added
+- **DeepSeek Harness (`dsh`) support** — `npx graphyloop install` now wires
+  `dsh` alongside OpenCode, Claude Code, Codex and Cursor. dsh composes its whole
+  plugin tree from patch layers, so graphyloop installs into the home-level layer
+  (`$DSH_HOME/cordis.patch.yml`, default `~/.dsh`): one `insert` row mounting
+  `@deepseek-ai/dsh-mcp-client` against `~/.graphyloop/mcp-server.mjs`. That layer
+  applies to **every** profile (web, headless, custom) and dsh hot-reloads it, so
+  the 15 tools appear without touching a bundle and without a pnpm step — dsh
+  already symlinks its dependency closure into `$DSH_HOME/profiles/node_modules`.
+  The MCP bridge namespaces tools, so in this harness they are
+  `mcp__graphyloop__<name>` (`mcp__graphyloop__plan_feature`, …).
+  Also installed: `$DSH_HOME/AGENTS.md` (dsh loads it as user-global instructions
+  for every session), the five bundled skills into `$DSH_HOME/skills`, and the
+  squad as a prompt library at `$DSH_HOME/graphyloop/{agents,commands}`.
+- **`graphyloop-squad` skill (dsh only).** dsh has no agent files and no
+  file-based slash commands — agents are cordis compositions and commands are
+  plugins — so a squad of 25 `.md` agents and 15 `/chadi-*` commands has nowhere to
+  land. Instead one skill maps the workflow onto dsh's own primitives: the
+  namespaced tool names, delegation through dsh's `subagent` tool with a role
+  prompt from the installed library, and the wave protocol. It states plainly that
+  this harness has no slash commands, so the model reads the matching workflow body
+  rather than inventing a command that cannot exist.
+- `skills_status` (and the engine's `skills` command) now also read the dsh skill
+  roots — `<project>/.dsh/skills`, `<project>/.agents/skills`, `$DSH_HOME/skills`,
+  `~/.agents/skills` — so a skill installed for dsh is reported as present instead
+  of missing.
+
+### Notes
+- The dsh patch layer is the user's own file: graphyloop appends one row, backs the
+  file up first, never rewrites the document (comments and `!!js` expressions
+  survive verbatim), and skips the merge entirely when its row is already there.
+  The shipped `[]` template is replaced rather than appended to, because a list
+  item after `[]` is invalid YAML and dsh fails loud at boot on a patch file it
+  cannot parse. Uninstall removes the row only while it is still byte-identical to
+  the installed copy, and leaves a parsable `[]` behind when nothing else remains.
+- `--home <dir>` overrides `$DSH_HOME`, so a sandboxed or CI install can never
+  reach a real harness home.
+- 14 new tests (`test/dsh.test.mjs`), 157 total. Verified against
+  `@deepseek-ai/dsh` 0.1.0-rc.6: `dsh --dump-config` composes the row from the
+  installed patch layer, and dsh's own MCP SDK plus its tool-schema gate
+  (`assertObjectJsonSchema` / `assertSupportedJsonSchema` / `jsonSchemaToTs`)
+  accept all 15 tools with unmangled names.
+
 ## [0.2.1] — 2026-08-16
 
 ### Fixed
@@ -239,6 +284,7 @@ bump may still change behaviour.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
+[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/chadixearth/graphyloop/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/chadixearth/graphyloop/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/chadixearth/graphyloop/compare/v0.1.3...v0.1.4
