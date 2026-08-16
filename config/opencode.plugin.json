@@ -1,1 +1,1 @@
-{"plugin":["./plugins/graphyloop/plugin.js"]}
+{"plugin":["./plugins/graphyloop/plugin.js","./plugins/server-guard/plugin.js"]}

@@ -74,7 +74,7 @@ Steps:
 3. Verify — every applicable check must pass:
    - `npx --yes graphyloop doctor` prints the harness table.
    - Core engine files exist: ~/.graphyloop/graphyloop/cli.mjs , ~/.graphyloop/mcp-server.mjs , ~/.graphyloop/lib/mcp.mjs , ~/.graphyloop/lib/engine.mjs .
-   - OpenCode (if present): ~/.config/opencode/opencode.json contains a plugin entry "./plugins/graphyloop/plugin.js", and ~/.config/opencode/agents/ contains 26 .md files.
+   - OpenCode (if present): ~/.config/opencode/opencode.json contains plugin entries "./plugins/graphyloop/plugin.js" and "./plugins/server-guard/plugin.js", and ~/.config/opencode/agents/ contains 26 .md files.
    - Claude Code (if present): ~/.claude.json has an mcpServers.graphyloop entry, and ~/.claude/agents/ is populated.
    - Codex (if present): ~/.codex/config.toml contains a [mcp_servers.graphyloop] section.
    - Cursor (if present): ~/.cursor/mcp.json has a "graphyloop" entry.
@@ -88,7 +88,7 @@ Do not ask permission for reversible steps — proceed. Stop only for: Node < 20
 
 | Harness | Agents | Commands | Rules | Tools |
 |---|---|---|---|---|
-| **OpenCode** | 26 agent files | 15 `/chadi-*` commands | AGENTS.md | graphyloop plugin (`graphyloop_*` tools) |
+| **OpenCode** | 26 agent files | 15 `/chadi-*` commands | AGENTS.md | graphyloop plugin (`graphyloop_*` tools) + server-guard (Windows) |
 | **Claude Code** | 26 agent files | 15 `/chadi-*` commands | AGENTS.md | MCP server (`√ Connected`) |
 | **Codex** | 15 prompts | 15 prompts | AGENTS.md | MCP server (`enabled`) |
 | **Cursor / Windsurf** | — | — | AGENTS.md | MCP server |
@@ -110,6 +110,7 @@ Verified in CI on Windows, macOS and Linux × Node 20, 22, 24 — including a re
 | 🌊 **Wave planner** | One call turns "I want an inventory system" into contract → **database ∥ backend ∥ frontend ∥ tests** → integration → **test ∥ typecheck ∥ security ∥ performance ∥ review** → gated deploy, with file ownership and dependencies the engine enforces |
 | 🔑 **Supabase + Vercel credentials** | Store keys once per project (chmod 600, git-ignored before the first write), sync them into the env file the framework reads, and preflight database/deploy work. Values are never returned to the model |
 | 🔒 **Config safety** | Timestamped backups before every write, never overwrites your config keys, idempotent re-runs, uninstall removes only byte-identical copies |
+| 🪟 **Windows hang guard** | `npm run dev` inside an agent session no longer freezes the turn: server-guard rewrites it into a launcher that starts the server without inheriting the tool's stdout pipe, so the call returns in milliseconds while the server keeps serving (`-Stop` kills the tree) |
 | ⚡ **Zero dependencies** | Pure Node (≥ 20), no npm packages at runtime, no shell scripts — installs the same on every platform |
 
 <details>
@@ -314,7 +315,7 @@ Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and t
 ## Development
 
 ```bash
-npm test              # 115 tests across 8 suites
+npm test              # 143 tests across 9 suites
 npm run test:fast     # everything except the installer/update suites (seconds)
 npm run test:list     # list the suites
 npm run test:secrets  # secrets suite only
@@ -347,6 +348,7 @@ One-time setup: add an npm granular access token (scope: graphyloop, read+write)
 
 | Version | Highlights |
 |---|---|
+| **0.2.1** | **Fix: `npm run dev` no longer hangs a Windows agent session forever.** The shell tool reads stdout until EOF, and EOF needs every handle to the pipe's write end closed — `Start-Process -RedirectStandardOutput/-RedirectStandardError` calls `CreateProcess` with `bInheritHandles=TRUE`, so the detached dev server inherited the tool's pipe and held it for its whole life. The workflow rules had recommended exactly that pattern as "the only safe detach". Measured with a self-exiting fixture: the launcher exited at 2.3 s, the caller's stdout EOF only arrived at 21.8 s — when the server died; with a real dev server, never · **`server-guard` plugin + `start-server.ps1` now ship with the kit** (they were documented in the rules but never installed): inline `npm run dev`/`node server.js`/`python -m http.server` are rewritten into a launcher that redirects inside a generated `.cmd` and starts it via ShellExecuteEx (`bInheritHandles=FALSE`) — EOF lag **19,498 ms → 8 ms**, server still serving after the call returns · `-Stop` now kills the whole process tree (npm's grandchildren survived a plain PID kill) and pid files are per-port · `Start-Process` with stdio redirects and no `-Wait` is blocked instead of whitelisted · 28 new tests (143 total) |
 | **0.2.0** | **Bundled skills** — `graphyloop-waves`, `supabase-setup`, `vercel-deploy`, `secrets-hygiene`, `swarm-memory` install with the squad, so a fresh setup is usable immediately; a skill you already have is never overwritten, and `skills_status` reports what is actually present · **`chadi-integrator`**, the missing owner of the wave-2 join, with an explicit contract-drift policy · **Wave planner** (`plan_feature`) — "I want an inventory system" becomes contract → **database ∥ backend ∥ frontend ∥ tests** → integration → **test ∥ typecheck ∥ security ∥ performance ∥ review** → gated deploy, and `task_distribute` now enforces it: `wave` + `dependsOn` gate dispatch, `dispatchNow`/`blocked` say what may run, `task_record` reports what a result unblocked · **Supabase + Vercel credentials** — `secrets_status` (masked, never a value), `secrets_set` (chmod 600 store, git-ignored before the first write), `env_sync` (values move file-to-file into `.env.local`, public aliases for public keys only), `preflight` (`db`/`deploy` blockers + gated command plan, executes nothing) · **`graphyloop update [--check]`** — refresh an install in place, repair a core tree missing new modules, keep your config keys; `doctor` now prints the installed core version · `/chadi-waves`, `/chadi-db`, `/chadi-deploy` · Fix: a stale hardcoded tool count in the installer suite made a spawned MCP server hold its stdio pipes on failure, hanging the whole test run instead of reporting it · test suites split per area with a filterable runner (115 tests) |
 | **0.1.3 / 0.1.4** | **MCP tools now run in-process** — the engine moved to `lib/engine.mjs` and is called directly instead of spawning a child process per tool call: **3.8 ms vs 73.7 ms** per call, and a slow call no longer blocks the server · **`memory_forget`** so a wrong memory can be corrected rather than recalled forever · memory search gains recency ranking and a `type` filter · Fix: the task queue grew without bound — settled tasks are capped (`GRAPHYLOOP_MAX_TASKS`, default 500), pending work never dropped · `initialize` echoes the client's protocol version instead of always asserting ours · npm metadata (repository, issues, homepage, keywords, author) · octopus mark + drawn 5-gate workflow diagram · CHANGELOG and contributor docs · 50 tests · a pre-push hook that blocks a push whose suite fails |
 | **0.1.2** | **Fix: MCP tools worked only after a manual init** — the swarm now initializes lazily on the first tool call, so Claude Code / Codex / Cursor work in a fresh project out of the box · **Fix: re-init after `shutdown` erased the whole memory log** · **Fix: parallel agents silently dropped each other's writes** — state is now lock-guarded (measured: 6 of 12 concurrent writes lost before, 12 of 12 kept after) · state moved to `<project>/.graphyloop/` with automatic migration from `.opencode/graphyloop/` · project-root guard extended to the MCP server · crash-safe atomic writes, corrupt-state quarantine, capped memory log · engine input validation (`--flag=value`, unknown agent types, duplicate ids, malformed task payloads, empty queries) · plugin surfaces CLI crashes/timeouts instead of swallowing them · uninstall no longer skips `AGENTS.md` when `opencode.json` is unparsable · `adapter/*.ts` (1.3k unrunnable lines) no longer published or installed · release gate rejects a tag that disagrees with `package.json` · first test coverage for the OpenCode plugin · 25 new tests (44 total) |

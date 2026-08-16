@@ -82,6 +82,7 @@ function frontmatterOf(text) {
 
 const normalizePlugin = (value) => String(value).replace(/^\.\//, '').replace(/[\\/]+$/, '')
 const GRAPHYLOOP_PLUGIN = 'plugins/graphyloop/plugin.js'
+const SERVER_GUARD_PLUGIN = 'plugins/server-guard/plugin.js'
 
 // ---------------------------------------------------------------------------
 // Sandbox: pre-seeded user configs (what the installer must never destroy)
@@ -265,6 +266,19 @@ test('install --harness all --force installs every harness and preserves user co
   assert.equal(readFileSync(pluginDest, 'utf8'), repoPlugin, 'installed plugin equals shipped plugin')
   // plugin.js must resolve the CLI under the new ~/.graphyloop core location
   assert.ok(repoPlugin.includes('.graphyloop'), 'plugin.js points at ~/.graphyloop core location')
+
+  // --- server-guard: plugin + its PowerShell launcher must land together ---
+  const guardEntry = ocCfg.plugin.find((p) => String(p).includes('server-guard/plugin.js'))
+  assert.ok(guardEntry, 'server-guard plugin entry present in opencode.json')
+  const guardDest = join(sandbox, '.config', 'opencode', String(guardEntry).replace(/^\.\//, ''))
+  assert.ok(existsSync(guardDest), `server-guard exists at referenced path: ${guardDest}`)
+  const guardLauncher = join(sandbox, '.config', 'opencode', 'plugins', 'server-guard', 'start-server.ps1')
+  assert.ok(existsSync(guardLauncher), 'server-guard launcher installed beside the plugin')
+  assert.equal(
+    readFileSync(guardLauncher, 'utf8'),
+    readFileSync(join(REPO_ROOT, 'plugin', 'server-guard', 'start-server.ps1'), 'utf8'),
+    'installed launcher equals shipped launcher'
+  )
 })
 
 test('re-running install is idempotent (no duplicate graphyloop entries)', () => {
@@ -277,6 +291,11 @@ test('re-running install is idempotent (no duplicate graphyloop entries)', () =>
     oc.plugin.map(normalizePlugin).filter((p) => p === GRAPHYLOOP_PLUGIN).length,
     1,
     'opencode: no duplicate graphyloop plugin entry'
+  )
+  assert.equal(
+    oc.plugin.map(normalizePlugin).filter((p) => p === SERVER_GUARD_PLUGIN).length,
+    1,
+    'opencode: no duplicate server-guard plugin entry'
   )
   assert.equal(
     Object.keys(oc.command).filter((k) => k.startsWith('chadi-')).length,

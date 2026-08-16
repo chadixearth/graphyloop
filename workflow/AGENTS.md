@@ -207,25 +207,32 @@ GraphyLoop swarm auto-inits per project (plugin handles it — do not call graph
 
 # Shell discipline (Windows hang prevention)
 
-The shell tool waits for the whole process tree and its stdio handles. A command that
-leaves a server/watcher running never "finishes" for the harness even after the useful
-output printed — session stalls. Rules:
+The shell tool reads the child's stdout/stderr until EOF. EOF arrives when EVERY handle to
+the pipe's write end is closed — NOT when the direct child exits. So a command that leaves
+a server/watcher running never "finishes" for the harness even after the useful output
+printed — session stalls. Rules:
 
 - NEVER end an inline shell command with a spawned server/watcher still alive.
   Smoke test pattern: start server → poll health → assert → `Stop-Process` the server
   (and its node.exe children on the port) → print verdict. Kill is part of the test.
-- Servers spawned via `Start-Process npm.cmd` still hang the tool: npm.cmd → cmd.exe →
-  node.exe children inherit console handles. `cmd /c start "" /b ...` ALSO hangs — the
-  inner cmd inherits the tool's stdio pipe handles even when the exe's output is
-  redirected to a log (confirmed 2026-08-06). The ONLY safe detach on Windows:
-  `Start-Process <exe> -RedirectStandardOutput <out.log> -RedirectStandardError <err.log>
-  -WindowStyle Hidden -PassThru` — the redirect params give the child its own file
-  handles (STARTF_USESTDHANDLES), zero pipe inheritance, tool call returns immediately.
-  Launch node.exe directly (not npm.cmd wrapper). Both redirect params required and must
-  be different files. Env vars: set `$env:X` before Start-Process, child inherits.
-  Global reusable launcher: `$HOME/.config/opencode/scripts/start-server.ps1` [OPTIONAL — community scripts; create or skip]
-  works from ANY project — `powershell -File "$HOME/.config/opencode/scripts/start-server.ps1" -Port 4321 -Command '"C:\Program Files\nodejs\node.exe" "scripts\server.mjs"'`.
-  Use `-Stop` to kill saved PID and free port. No per-project script needed.
+- Why hand-rolled detaches leak: CreateProcess with bInheritHandles=TRUE duplicates every
+  inheritable handle of the launching shell into the child, so the server ends up holding
+  the tool's stdout pipe for its entire life. `Start-Process npm.cmd` (npm.cmd → cmd.exe →
+  node.exe children), `cmd /c start "" /b ...`, AND
+  `Start-Process <exe> -RedirectStandardOutput <out.log> -RedirectStandardError <err.log>`
+  all leak this way. The redirect params give the child its own std handles
+  (STARTF_USESTDHANDLES) but do NOT turn inheritance off — this was documented here as
+  "the only safe detach" and it was wrong. Measured 2026-08-16 with a self-exiting fixture:
+  launcher exited at 2.3s, the caller's stdout EOF only arrived at 21.8s, exactly when the
+  server died; with a real dev server that is "never".
+- The safe detach is the launcher shipped with this kit:
+  `$HOME/.config/opencode/plugins/server-guard/start-server.ps1`. It writes the redirection
+  into a generated .cmd wrapper and starts that via ShellExecuteEx (bInheritHandles=FALSE),
+  so the tool's pipe closes with the launcher (measured lag 7–8ms) while the server keeps
+  serving. Works from ANY project — `powershell -File "$HOME/.config/opencode/plugins/server-guard/start-server.ps1" -Port 4321 -Command '"C:\Program Files\nodejs\node.exe" "scripts\server.mjs"'`.
+  Launch node.exe (or the real exe) directly, never the npm.cmd/npx/pnpm/yarn shims.
+  `-Stop` kills the saved PID tree and frees the port. No per-project script needed.
+  Env vars: set `$env:X` before the call, the child inherits.
 - Long-running work (build+start+poll) — split into separate tool calls: one starts
   detached, the next polls. Do not combine start-and-wait loops with a live server in
   one command.
@@ -240,7 +247,8 @@ output printed — session stalls. Rules:
   start-server.ps1 launch — output shows `SERVER_GUARD_REWRITE` then PID +
   SERVER_UP/SERVER_DOWN; just continue, the server is live and detached.
   Ambiguous cases (pnpm/yarn/bun, npx/framework .cmd shims, `--watch`, command
-  chains) and broken detaches (`cmd /c start`, `Start-Process npm*`) are BLOCKED
+  chains) and broken detaches (`cmd /c start`, `Start-Process npm*`,
+  `Start-Process` with `-RedirectStandard*` and no `-Wait`) are BLOCKED
   with `SERVER_GUARD_BLOCKED` — follow the launcher instructions in the error,
   do not retry the same command. Also applies a 300s default timeout to bash
   calls that omit one. Programmatic launcher calls should pass `-CommandB64`
