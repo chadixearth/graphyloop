@@ -328,9 +328,11 @@ Enabled set is deliberately small:
 
 An existing skill of the same name is **never** overwritten by install or update — your copy wins.
 
-**From your own collections** (superpowers and similar — installed separately): `brainstorming`, `systematic-debugging`, `tdd-workflow`, `writing-plans`, `verification-before-completion`, `council`, `security-review`, `security-scan`, `e2e-testing`, `error-handling`, `database-migrations`, `postgres-patterns`, `prisma-patterns`, `deployment-patterns`, `github-ops`, `terminal-ops`, `using-git-worktrees`, `finishing-a-development-branch`, `requesting-code-review`, `receiving-code-review`, `search-first`, `graphify`, `last30days`, `design-taste-frontend`, `minimalist-ui`, `high-end-visual-design`, `image-to-code`, `redesign-existing-projects`, `api-connector-builder`, `benchmark-optimization-loop`, plus any stack-specific ones your agents name (`django-security`, `laravel-security`, `mysql-patterns`, …).
+The bundle also carries the rest of the curated library the agent files route on — design systems (`minimalist-ui`, `high-end-visual-design`, `image-to-code`, `redesign-existing-projects`), workflow (`brainstorming`, `tdd-workflow`, `systematic-debugging`, `writing-plans`, `verification-before-completion`, `security-review`, `security-scan`, `council`, `using-git-worktrees`, `finishing-a-development-branch`, `requesting-code-review`, `receiving-code-review`), data and delivery (`postgres-patterns`, `prisma-patterns`, `database-migrations`, `deployment-patterns`, `github-ops`, `terminal-ops`, `e2e-testing`, `error-handling`), research (`last30days`, `deep-research`, `exa-search`, `search-first`, `graphify`), plus the GSAP, three.js, video and branding packs — 71 skills in total.
 
-Call `skills_status` to see which of these are actually on this machine — bundled and referenced are reported separately, so a gap is a one-line statement instead of a faked skill.
+**Not bundled** (state the gap, never fake it): `design-taste-frontend`, `api-connector-builder`, `benchmark-optimization-loop`, `ai-regression-testing`, `hyperframes`, `remotion-to-hyperframes`, and any stack-specific skill an agent names (`django-security`, `mysql-patterns`, …).
+
+Call `skills_status` to see which skills are actually on this machine — bundled and referenced are reported separately, so a gap is a one-line statement instead of a faked skill.
 
 Rules:
 - Each subagent's `.md` lists its primary + supporting skills — that mapping is the source of truth, not improvisation.
