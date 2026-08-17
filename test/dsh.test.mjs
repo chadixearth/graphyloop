@@ -18,7 +18,7 @@ import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { detectHarnesses, dshHome } from '../lib/detect.mjs'
-import { patchBlock, patchFileHeader, hasPatchRow, isEmptyPatchList, PATCH_ROW_ID } from '../lib/install-dsh.mjs'
+import { patchBlock, legacyPatchBlocks, patchFileHeader, hasPatchRow, isEmptyPatchList, PATCH_ROW_ID } from '../lib/install-dsh.mjs'
 import { bundledSkills, DSH_SKILLS_SRC } from '../lib/install-skills.mjs'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -100,6 +100,14 @@ test('install --harness dsh wires the MCP client, the rules, the skills and the 
   // Windows paths are backslash-heavy: single quotes keep them literal.
   assert.ok(text.includes(`          - '${mcpPath()}'`), `server path not quoted verbatim:\n${text}`)
   assert.ok(!text.includes('\t'), 'tabs are invalid YAML indentation')
+  // dsh's cwd is the launch directory, not the open project, and its mcp-client
+  // strips every DSH_* name from the child env — without this row the server
+  // cannot find the workspace and every tool call fails the project-root guard.
+  assert.match(text, /^ {8}env:$/m, 'the row carries an env block')
+  assert.ok(
+    text.includes(`          GRAPHYLOOP_DSH_HOME: '${join(home, '.dsh')}'`),
+    `the dsh home is not stated for the server:\n${text}`
+  )
 
   // 2. user-global instructions dsh loads for every session
   assert.equal(
@@ -141,7 +149,47 @@ test('re-installing dsh is idempotent: one graphyloop row, no duplicate insert',
   assert.equal(count(second, `id: ${PATCH_ROW_ID}`), 1, `duplicated row:\n${second}`)
   assert.equal(count(second, '- insert:'), 1)
   assert.equal(second, first, 'an already-wired patch layer is left byte-identical')
-  assert.match(res.out, /already present/)
+  assert.match(res.out, /already current/)
+})
+
+test('a row from an older graphyloop is upgraded in place, keeping the rest of the layer', () => {
+  // 0.3.0 wrote the row without an env block, so the server read its cwd — the
+  // dsh host's launch directory — and refused every tool call. An update has to
+  // repair that row instead of skipping it because the id is already there.
+  const userLayer = ['# keep me', '- id: hmr', '  disabled: true', ''].join('\n')
+  mkdirSync(join(home, '.dsh'), { recursive: true })
+  const stale = legacyPatchBlocks(mcpPath())[0]
+  writeFileSync(patchPath(), `${userLayer}\n${stale}`)
+
+  const res = install()
+
+  const text = patchText()
+  assert.match(res.out, /upgraded id: graphyloop-mcp/, res.out)
+  assert.equal(count(text, `id: ${PATCH_ROW_ID}`), 1, `row duplicated instead of upgraded:\n${text}`)
+  assert.ok(
+    text.includes(`          GRAPHYLOOP_DSH_HOME: '${join(home, '.dsh')}'`),
+    `env marker not added:\n${text}`
+  )
+  assert.ok(text.startsWith('# keep me'), 'user comment kept')
+  assert.match(text, /^- id: hmr$/m, 'user row kept')
+  assert.equal(backups(join(home, '.dsh'), 'cordis.patch.yml').length, 1, 'backed up before the upgrade')
+  assert.equal(patchText(), `${userLayer}\n${patchBlock(mcpPath(), join(home, '.dsh'))}`, 'block swapped exactly')
+})
+
+test('a graphyloop row the user edited is left alone, with the missing env stated', () => {
+  install()
+  // Stripping the env block alone would just be the older graphyloop shape (and
+  // is upgraded); this is a real user edit, so the row stays theirs.
+  const edited = patchText()
+    .replace(/^ {8}env:$[\s\S]*$/m, '')
+    .replace('command: node', "command: 'C:\\tools\\node.exe'")
+  writeFileSync(patchPath(), edited)
+  const res = install('--force')
+  assert.match(res.out, /user-modified/, res.out)
+  assert.match(res.out, /GRAPHYLOOP_DSH_HOME/, 'the warning names the key the row needs')
+  assert.equal(count(patchText(), `id: ${PATCH_ROW_ID}`), 1, 'no second row appended next to theirs')
+  assert.ok(patchText().includes("command: 'C:\\tools\\node.exe'"), 'the user edit survives')
+  assert.ok(!patchText().includes('GRAPHYLOOP_DSH_HOME'), 'the edited row is the user\'s and stays as-is')
 })
 
 test('an existing user patch layer keeps its rows and comments, and is backed up first', () => {
@@ -268,6 +316,17 @@ test('uninstall keeps a graphyloop row the user edited', () => {
   assert.ok(hasPatchRow(patchText()), 'an edited row is the user\'s now, and is kept')
 })
 
+test('uninstall still recognises a row written by an older graphyloop', () => {
+  const userLayer = ['# keep me', '- id: hmr', '  disabled: true', ''].join('\n')
+  mkdirSync(join(home, '.dsh'), { recursive: true })
+  writeFileSync(patchPath(), `${userLayer}\n${legacyPatchBlocks(mcpPath())[0]}`)
+
+  const res = cli('uninstall', '--home', home, '--harness', 'dsh')
+  assert.equal(res.code, 0, res.out + res.err)
+  assert.ok(!hasPatchRow(patchText()), `legacy row not removed:\n${patchText()}`)
+  assert.match(patchText(), /^- id: hmr$/m, 'user row kept')
+})
+
 // ---------------------------------------------------------------------------
 // Runtime reporting
 // ---------------------------------------------------------------------------
@@ -304,10 +363,18 @@ test('doctor lists dsh with its patch-layer config path', () => {
 // ---------------------------------------------------------------------------
 
 test('the patch block is a valid single insert and quotes a quote-bearing path', () => {
-  const block = patchBlock("C:\\it's\\mcp-server.mjs")
+  const block = patchBlock("C:\\it's\\mcp-server.mjs", "C:\\it's\\.dsh")
   assert.ok(block.includes("- 'C:\\it''s\\mcp-server.mjs'"), `bad quoting: ${block}`)
+  assert.ok(block.includes("GRAPHYLOOP_DSH_HOME: 'C:\\it''s\\.dsh'"), `bad env quoting: ${block}`)
   assert.ok(hasPatchRow(block))
   assert.ok(!isEmptyPatchList(block))
   assert.ok(isEmptyPatchList(patchFileHeader()), 'the bare header holds no entries')
   assert.ok(existsSync(join(DSH_SKILLS_SRC, 'graphyloop-squad', 'SKILL.md')), 'the dsh skill ships in the package')
+
+  // Every legacy shape must still be a recognisable graphyloop row, or an
+  // upgrade would append a second one next to it.
+  for (const legacy of legacyPatchBlocks("C:\\it's\\mcp-server.mjs")) {
+    assert.ok(hasPatchRow(legacy), `legacy block unrecognised:\n${legacy}`)
+    assert.ok(!legacy.includes('GRAPHYLOOP_DSH_HOME'), 'a legacy block predates the env marker')
+  }
 })

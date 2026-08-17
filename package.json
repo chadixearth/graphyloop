@@ -41,9 +41,11 @@
     "test:secrets": "node scripts/run-tests.mjs secrets",
     "test:planner": "node scripts/run-tests.mjs planner",
     "test:mcp": "node scripts/run-tests.mjs mcp",
+    "test:hotpath": "node scripts/run-tests.mjs hotpath",
     "test:plugin": "node scripts/run-tests.mjs plugin",
     "test:install": "node scripts/run-tests.mjs install",
     "test:update": "node scripts/run-tests.mjs update",
+    "bench": "node scripts/bench-mcp.mjs",
     "pack": "npm pack",
     "prepublishOnly": "node scripts/run-tests.mjs"
   },

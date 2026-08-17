@@ -5,6 +5,7 @@ node_modules/
 .graphyloop/
 .opencode/graphyloop/state.json
 graphify-out/
+bench-*.json
 # Compiled Python bytecode from the bundled skills' scripts — machine- and
 # version-specific, regenerated on use, and it must never reach a user's install.
 __pycache__/
