@@ -10,7 +10,7 @@
 
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
@@ -506,6 +506,40 @@ test('dsh: with no usable workspace the refusal says how to fix it', { timeout: 
       await waitExit(s, 3000).catch(() => {})
     }
     rmSync(fakeHome, { recursive: true, force: true })
+  }
+})
+
+test('a symlinked path to the home directory is refused too', { timeout: 20000 }, async () => {
+  // The guard used to compare paths textually. On macOS process.cwd() answers with
+  // the resolved path (/private/var/...) while an env-provided home is the symlink
+  // (/var/...), so a cwd that WAS the home directory compared as a different
+  // directory and auto-init wrote into it. Junctions need no elevation on Windows,
+  // so this runs everywhere.
+  const parent = mkdtempSync(join(tmpdir(), 'graphyloop-symhome-'))
+  const realHome = join(parent, 'home')
+  const linkedHome = join(parent, 'home-link')
+  mkdirSync(realHome, { recursive: true })
+  try {
+    symlinkSync(realHome, linkedHome, process.platform === 'win32' ? 'junction' : 'dir')
+  } catch (e) {
+    rmSync(parent, { recursive: true, force: true })
+    return // no symlink privileges in this environment: nothing to assert
+  }
+
+  const s = spawnServer({ GRAPHYLOOP_HOME: realHome, GRAPHYLOOP_PROJECT_ROOT: '', GRAPHYLOOP_CLI: '' }, { cwd: linkedHome })
+  const r = createLineReader(s.stdout)
+  try {
+    s.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'swarm_state', arguments: {} } })}\n`)
+    const res = JSON.parse(await r.nextLine(5000))
+    assert.equal(res.result.isError, true, `the same directory reached through a link must still be refused: ${JSON.stringify(res.result)}`)
+    assert.match(res.result.content[0].text, /not a project root/)
+    assert.ok(!existsSync(join(realHome, '.graphyloop')), 'nothing written into the home directory')
+  } finally {
+    if (s.exitCode === null) {
+      s.kill('SIGTERM')
+      await waitExit(s, 3000).catch(() => {})
+    }
+    rmSync(parent, { recursive: true, force: true })
   }
 })
 

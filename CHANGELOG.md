@@ -4,6 +4,30 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.4.1] — 2026-08-17
+
+### Fixed
+- **The project-root guard compared paths textually, so the same directory reached
+  through a symlink was not recognised as the home directory.** On macOS
+  `process.cwd()` answers with the resolved path (`/private/var/...`) while an
+  env-provided or symlinked `HOME` is the link (`/var/...`), so a server whose cwd
+  *was* the home directory passed the guard and auto-init wrote
+  `<home>/.graphyloop/state.json` — exactly what the guard exists to prevent. Both
+  guards (the MCP server and the mirrored OpenCode plugin) now compare canonical
+  paths via `realpathSync.native`, falling back to `resolve()` for a path that
+  does not exist yet. The verdict is cached per root, so this costs one realpath
+  per root rather than one per tool call.
+  - Caught by the macOS matrix on the v0.4.0 tag, which was therefore never
+    published: 0.4.1 is that release plus this fix.
+  - Regression test added and verified to discriminate: with the old comparison a
+    junction to the home directory reads as a different directory (`false`), with
+    the new one it does not (`true`). Junctions need no elevation on Windows, so
+    the test runs on every platform instead of being macOS-only.
+
+### Tests
+- 1 new (185 total): a symlinked path to the home directory is refused, and
+  nothing is written into it.
+
 ## [0.4.0] — 2026-08-17
 
 ### Changed

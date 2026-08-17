@@ -8,7 +8,7 @@
 // No API keys. All state lives in <project>/.graphyloop/state.json.
 // LLM work is still done by OpenCode task subagents; this only coordinates.
 
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -48,14 +48,27 @@ function findNode() {
   return cachedNode;
 }
 
+// Canonical form of a path: symlinks resolved, or plain resolve() when the path
+// does not exist yet. A textual compare is not enough — on macOS the directory
+// handed to us can be the resolved path (/private/var/...) while HOME is the
+// symlink (/var/...), which made the guard treat the home directory as a project.
+function canonicalPath(value) {
+  const full = path.resolve(value);
+  try {
+    return realpathSync.native(full);
+  } catch {
+    return full;
+  }
+}
+
 function samePath(left, right) {
-  const normalize = (value) => path.resolve(value).replace(/[\\/]+$/, '').toLowerCase();
+  const normalize = (value) => canonicalPath(value).replace(/[\\/]+$/, '').toLowerCase();
   return normalize(left) === normalize(right);
 }
 
 function isInside(root, parent) {
-  const normalizedRoot = path.resolve(root).toLowerCase();
-  const normalizedParent = path.resolve(parent).replace(/[\\/]+$/, '').toLowerCase();
+  const normalizedRoot = canonicalPath(root).toLowerCase();
+  const normalizedParent = canonicalPath(parent).replace(/[\\/]+$/, '').toLowerCase();
   return normalizedRoot === normalizedParent || normalizedRoot.startsWith(`${normalizedParent}${path.sep}`);
 }
 
