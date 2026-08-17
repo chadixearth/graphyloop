@@ -4,6 +4,175 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.4.0] — 2026-08-17
+
+### Changed
+- **Every MCP tool call re-read and re-parsed the whole state file before doing
+  any work.** `<project>/.graphyloop/state.json` is the swarm's memory, so it
+  grows: at 800 memories (~220 KB) a read-only `swarm_state` cost 2.9 ms of
+  `JSON.parse` before it looked at anything, and every write paid the same cost
+  again on the way in. A session makes hundreds of calls, and the parse dominated
+  all of them.
+  - State is now cached in the engine and validated against the file's **stat
+    signature** — mtime + size + inode + ctime — never against a timer. Writes are
+    tmp-file + rename, which changes the inode every time, so a write by anything
+    (this engine, a spawned CLI, a second harness, an editor) invalidates the
+    cache on the next call. The failure mode of a wrong signature is a redundant
+    re-parse, never a stale answer.
+  - A write **re-stamps** the cache with what it just wrote instead of dropping
+    it, because the call right after a write is almost always a read of it.
+  - A write body that mutated the loaded state but returned before saving (an
+    error path such as `spawn` past `maxAgents`) drops the cache, so an unsaved
+    mutation can never be served as state.
+- **Recall re-stringified and re-lowercased the entire store on every query.**
+  `memory_search` built `content + JSON.stringify(metadata)` per entry per call.
+  The searchable text is now built once per entry and kept in a `WeakMap` keyed by
+  the entry object — nothing has to invalidate it, since entries are immutable and
+  a re-parse produces new objects that get their own text.
+- **State is written compact.** Two-space indentation added ~46% to the bytes of
+  every mutation (319,511 → 218,675 bytes at 800 memories) and ~0.4 ms to each
+  `JSON.stringify`, for a file that is machine state rather than a config anyone
+  edits. `GRAPHYLOOP_PRETTY_STATE=1` restores the readable form.
+- **The state lock costs one syscall when uncontended**, down from three: the
+  parent directory is created from the `ENOENT` path instead of an unconditional
+  recursive `mkdir` per write. A contended writer now backs off on an escalating
+  schedule (0.25 ms → 20 ms) instead of sleeping a flat 20 ms — a state write
+  takes about 1 ms, so every waiter used to wait an order of magnitude longer than
+  the work it was waiting for. The mutex itself is unchanged, and concurrent
+  writers still lose nothing (6 writers × 20 stores = 320/320 memories kept).
+- **Project detection is no longer repeated per call.** `detectStack()` reads
+  package.json, lockfiles, config files and the schema tree; `plan_feature`,
+  `env_sync` and `preflight` each called it fresh, so planning one feature
+  re-scanned the project three times. It is cached against package.json's stat
+  signature and passed into `preflight()` rather than re-detected there. The MCP
+  server likewise resolves `cwd` and the project-root guard verdict once per root
+  instead of once per call.
+- **`ping` and `tools/list` answer from a pre-serialized template.** `tools/list`
+  re-serialized ~9 KB of tool schema on every call. `readline` is gone from the
+  server: a stdio JSON-RPC server only needs "split on `\n`", and the splitter
+  resumes scanning where the previous chunk stopped, so a 1 MB `task_distribute`
+  payload is reassembled in linear time instead of being rescanned per chunk.
+
+Measured on Windows / Node 24 with 800 seeded memories. Per-call numbers are the
+old and new engine **alternating in one process** (300 iterations per arm), so
+machine drift hits both arms equally:
+
+| operation | before | after | |
+|---|---|---|---|
+| `swarm_state` / `agent_list` | 2.910 ms | 0.013 ms | 217x |
+| `memory_search` (typed) | 3.991 ms | 0.138 ms | 29x |
+| `memory_search` | 6.779 ms | 0.972 ms | 7.0x |
+| `preflight` | 0.720 ms | 0.180 ms | 4.0x |
+| `plan_feature` | 7.678 ms | 2.824 ms | 2.7x |
+| `memory_store` | 7.488 ms | 2.977 ms | 2.5x |
+| `task_record` | 7.166 ms | 3.132 ms | 2.3x |
+
+End to end over real stdio, the same suite before and after: `swarm_state`
+2.615 → 0.193 ms, `memory_search` 3.128 → 0.393 ms, `memory_store`
+5.851 → 2.596 ms, `plan_feature` 6.835 → 3.371 ms. Pipelined throughput:
+`swarm_state` 311 → 26,062 calls/sec, `memory_search` 226 → 2,624 calls/sec,
+`ping` 181,574 calls/sec. `ping` at 0.119 ms sits at the floor of a Node stdio
+round trip on this machine (an echo server that does nothing measures 0.151 ms),
+so the protocol layer adds nothing measurable.
+
+**What is deliberately not faster.** A mutating call still rewrites the whole
+state file under the lock: at 800 memories that is 0.77 ms to serialize, 0.50 ms
+to write the temp file, 0.83 ms to rename and 0.37 ms of lock, and it is what
+guarantees that no memory is ever lost and that a crash mid-write cannot leave an
+unparsable file. Trading that for an append-only journal or a deferred write would
+buy ~2 ms per write by weakening the one property the memory store exists for, so
+it was not done. Cold start (~60 ms, dominated by Node's own boot) is unchanged:
+`module.enableCompileCache()` was tried and measured 0.93–0.99x in an interleaved
+A/B — no gain — so it is not shipped.
+
+### Added
+- `npm run bench` (`scripts/bench-mcp.mjs`) — cold start, per-call round trip over
+  real stdio, pipelined throughput and in-process engine cost, with `--save` /
+  `--compare` so a change can be measured against a baseline instead of asserted.
+  It verifies each call really did work before timing it: a tool that fails
+  validation or the project-root guard answers in microseconds, which reads as
+  spectacular throughput and measures nothing.
+- `engine.metrics()` — loads, parses, writes, lock waits, searches, plus the state
+  file it describes. This is what makes "the cache works" a test assertion rather
+  than a claim, and it answers "why is this session slow" with a parse count.
+- `preflight({ stack })` in `lib/stack.mjs` accepts an already-detected stack.
+
+### Tests
+- 18 new (184 total), all observational rather than timing-based, so they are
+  deterministic on a loaded CI box: 40 reads cost exactly one parse; a write
+  re-stamps rather than drops; **a write from another OS process is visible to the
+  next call**; an outside `spawn` changes the roster mid-session; a rejected write
+  publishes nothing; a state file corrupted underneath a live engine is quarantined
+  instead of served from cache; cached search text produces byte-identical ranking
+  and `searched` counts to a cold engine across five queries × two type filters;
+  an entry stored after the cache warmed is still searchable, metadata included;
+  compact by default and pretty on request, both re-readable by a separate process;
+  six engines interleaving writes lose nothing; an edited package.json re-detects
+  the stack; `ping` / `tools/list` keep numeric **and string** ids and the prebuilt
+  payload matches the real tool list; a burst of 12 requests in one write gets 12
+  answers in order; a 300 KB single request spanning many pipe chunks arrives
+  intact; a request with no trailing newline is still answered at EOF.
+
+## [0.3.1] — 2026-08-17
+
+Documented and tested, but never published on its own: it ships inside 0.4.0.
+
+
+
+### Fixed
+- **Every graphyloop tool failed in the DeepSeek Harness with `graphyloop skipped:
+  <your home> is not a project root`, with a real project open the whole time.**
+  The MCP server resolved its project root once, at startup, from
+  `process.cwd()`. That is correct for a harness that spawns one server per
+  project (Claude Code, Codex, Cursor, OpenCode), and wrong for dsh: dsh is a
+  long-lived host whose cwd is the directory you typed `dsh` in — usually your
+  home — while the project is the **workspace** picked in the UI and recorded in
+  dsh's own store. So the root was the home directory, the project-root guard
+  refused it (correctly — auto-init writes `<root>/.graphyloop/state.json`), and
+  no tool ever ran. Reproduced against the installed server: `swarm_state` with
+  cwd at `C:\Users\<user>` returned the refusal while
+  `storages/workspace.json` named an open project.
+  - The root is now resolved **per tool call**, in order: an explicit
+    `GRAPHYLOOP_PROJECT_ROOT` pin (still guarded, so pinning your home is refused
+    rather than obeyed) → the dsh workspace store
+    (`$DSH_HOME/storages/workspace.json`, most recently updated workspace first,
+    with `session_projcache.json`'s per-session `identity.cwd` as the fallback for
+    a host that has a live session but no workspace row yet) → cwd.
+  - Per call, not per process, so switching workspace in dsh lands in the new
+    project on the next tool call without restarting the harness. Each root keeps
+    its own engine and its own `<root>/.graphyloop/state.json` (bounded to 8), and
+    the resolved root is logged on stderr — `graphyloop: project root <path> (from
+    dsh workspace)` — so a wrong guess is visible instead of silent.
+  - The dsh store reads are cached on mtime + size, so the common case costs two
+    `stat` calls per tool call rather than two JSON parses.
+- **The `graphyloop-mcp` patch row now states the dsh home** —
+  `env: GRAPHYLOOP_DSH_HOME: '<$DSH_HOME>'`. It cannot be inferred at runtime:
+  `dsh-mcp-client` builds the child env from `scrubbedParentEnv()`, which drops
+  every `DSH_*` name (case-insensitively), so an explicit `env` entry is the only
+  channel into the server. It doubles as the "this is dsh" marker — the workspace
+  store is never consulted for any other harness, so a Claude Code session started
+  in a home directory still fails loudly instead of silently adopting a dsh
+  project. `GRAPHYLOOP_HARNESS=dsh` is the hand-written equivalent.
+- **`install` / `update` upgrade an existing dsh row in place** instead of
+  skipping it because `id: graphyloop-mcp` was already present — a row written by
+  0.3.0 would otherwise keep failing forever, and the user cannot be expected to
+  hand-apply a bug fix. The old block is matched byte-for-byte before it is
+  replaced, the file is backed up first, and every other row, comment and `!!js`
+  expression is untouched. A row you edited yourself is still left alone, with the
+  missing key named in the install report. `uninstall` recognises both the current
+  and the 0.3.0 block shape.
+- **The refusal message is now actionable under dsh**: it says that dsh keeps the
+  open project in its workspace store rather than the working directory, names the
+  store it looked in, and gives the `GRAPHYLOOP_PROJECT_ROOT` pin and the
+  `cordis.patch.yml` row to add it to.
+
+### Tests
+- 6 new (166 total): the workspace store beating the host cwd, a mid-session
+  workspace switch being followed, the `session_projcache.json` fallback, the
+  actionable refusal when no workspace is usable, the env marker in the installed
+  row, the in-place upgrade of a 0.3.0 row (and uninstall still matching it), and
+  a user-edited row surviving with the missing key reported.
+
 ## [0.3.0] — 2026-08-16
 
 ### Added

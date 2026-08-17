@@ -10,7 +10,7 @@
 
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
@@ -115,7 +115,7 @@ async function callTool(name, args) {
   return msg.result
 }
 
-function spawnServer(extraEnv) {
+function spawnServer(extraEnv, opts = {}) {
   const child = spawn(process.execPath, [MCP_SERVER], {
     env: {
       ...process.env,
@@ -123,6 +123,7 @@ function spawnServer(extraEnv) {
       GRAPHYLOOP_CLI: fakeCli,
       ...extraEnv,
     },
+    ...(opts.cwd ? { cwd: opts.cwd } : {}),
     stdio: ['pipe', 'pipe', 'pipe'],
   })
   child.stderr.resume()
@@ -365,6 +366,139 @@ test('home directory is refused as a project root', { timeout: 15000 }, async ()
     const res = JSON.parse(await r.nextLine(5000))
     assert.equal(res.result.isError, true)
     assert.match(res.result.content[0].text, /not a project root/)
+    assert.ok(!existsSync(join(fakeHome, '.graphyloop')), 'home directory left untouched')
+  } finally {
+    if (s.exitCode === null) {
+      s.kill('SIGTERM')
+      await waitExit(s, 3000).catch(() => {})
+    }
+    rmSync(fakeHome, { recursive: true, force: true })
+  }
+})
+
+// dsh (DeepSeek Harness) is not like the other harnesses: it is a long-lived
+// host whose cwd is wherever it was launched — usually HOME — while the project
+// is the workspace picked in its UI and recorded in dsh's own storage. Reading
+// cwd there fails the guard above on every single call, so the server reads the
+// workspace store when the installer has told it where that store is.
+function writeDshWorkspaces(dshDir, entries) {
+  mkdirSync(join(dshDir, 'storages'), { recursive: true })
+  const workspaces = {}
+  entries.forEach((entry, i) => {
+    workspaces[`ws-${i}`] = { path: entry.path, title: `ws-${i}`, updatedAt: entry.updatedAt }
+  })
+  writeFileSync(
+    join(dshDir, 'storages', 'workspace.json'),
+    JSON.stringify({
+      unit: { name: 'workspace', version: 2 },
+      global: { initialized: true, workspaceIds: Object.keys(workspaces) },
+      tables: { workspaces },
+    })
+  )
+}
+
+// The server must not be pinned to the fake CLI here: an installed core runs the
+// engine in-process, which is the path that has to resolve the root per call.
+const dshEnv = (fakeHome, dshDir) => ({
+  GRAPHYLOOP_HOME: fakeHome,
+  GRAPHYLOOP_PROJECT_ROOT: '',
+  GRAPHYLOOP_CLI: '',
+  GRAPHYLOOP_DSH_HOME: dshDir,
+})
+
+test('dsh: the project root is the open workspace, not the host cwd', { timeout: 20000 }, async () => {
+  const fakeHome = mkdtempSync(join(tmpdir(), 'graphyloop-dsh-home-'))
+  const dshDir = join(fakeHome, '.dsh')
+  const stale = mkdtempSync(join(tmpdir(), 'graphyloop-dsh-stale-'))
+  const active = mkdtempSync(join(tmpdir(), 'graphyloop-dsh-active-'))
+  const switched = mkdtempSync(join(tmpdir(), 'graphyloop-dsh-switched-'))
+  writeDshWorkspaces(dshDir, [
+    { path: stale, updatedAt: '2026-01-01T00:00:00.000Z' },
+    { path: active, updatedAt: '2026-08-17T00:30:20.936Z' },
+  ])
+  const s = spawnServer(dshEnv(fakeHome, dshDir), { cwd: fakeHome })
+  const r = createLineReader(s.stdout)
+  try {
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'memory_store', arguments: { content: 'from the dsh workspace' } } })}\n`
+    )
+    const stored = JSON.parse(await r.nextLine(5000))
+    assert.equal(stored.result.isError, false, stored.result.content[0].text)
+    assert.ok(existsSync(join(active, '.graphyloop', 'state.json')), 'state written to the most recent workspace')
+    assert.ok(!existsSync(join(stale, '.graphyloop')), 'an older workspace is left alone')
+    assert.ok(!existsSync(join(fakeHome, '.graphyloop', 'state.json')), 'the host cwd (HOME) is never written to')
+
+    // Switching workspace in the dsh UI updates the store; resolution is per
+    // call, so the next tool call must follow without restarting the harness.
+    writeDshWorkspaces(dshDir, [
+      { path: active, updatedAt: '2026-08-17T00:30:20.936Z' },
+      { path: switched, updatedAt: '2026-08-18T09:00:00.000Z' },
+    ])
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'memory_store', arguments: { content: 'after the switch' } } })}\n`
+    )
+    const second = JSON.parse(await r.nextLine(5000))
+    assert.equal(second.result.isError, false, second.result.content[0].text)
+    assert.ok(existsSync(join(switched, '.graphyloop', 'state.json')), 'the new workspace gets its own state')
+  } finally {
+    if (s.exitCode === null) {
+      s.kill('SIGTERM')
+      await waitExit(s, 3000).catch(() => {})
+    }
+    for (const dir of [fakeHome, stale, active, switched]) rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('dsh: a session cwd is used when no workspace row exists yet', { timeout: 20000 }, async () => {
+  const fakeHome = mkdtempSync(join(tmpdir(), 'graphyloop-dsh-sess-home-'))
+  const dshDir = join(fakeHome, '.dsh')
+  const project = mkdtempSync(join(tmpdir(), 'graphyloop-dsh-sess-proj-'))
+  mkdirSync(join(dshDir, 'storages'), { recursive: true })
+  writeFileSync(
+    join(dshDir, 'storages', 'session_projcache.json'),
+    JSON.stringify({
+      unit: { name: 'session_projcache', version: 3 },
+      global: null,
+      tables: { sessions: { 'session-1': { identity: { createdAt: 1786882638866, cwd: project }, rows: {} } } },
+    })
+  )
+  const s = spawnServer(dshEnv(fakeHome, dshDir), { cwd: fakeHome })
+  const r = createLineReader(s.stdout)
+  try {
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'swarm_state', arguments: {} } })}\n`
+    )
+    const res = JSON.parse(await r.nextLine(5000))
+    assert.equal(res.result.isError, false, res.result.content[0].text)
+    assert.ok(existsSync(join(project, '.graphyloop', 'state.json')), 'the session cwd is used as the project root')
+  } finally {
+    if (s.exitCode === null) {
+      s.kill('SIGTERM')
+      await waitExit(s, 3000).catch(() => {})
+    }
+    for (const dir of [fakeHome, project]) rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('dsh: with no usable workspace the refusal says how to fix it', { timeout: 20000 }, async () => {
+  const fakeHome = mkdtempSync(join(tmpdir(), 'graphyloop-dsh-empty-'))
+  const dshDir = join(fakeHome, '.dsh')
+  // The only workspace on record is HOME itself, which the guard refuses.
+  writeDshWorkspaces(dshDir, [{ path: fakeHome, updatedAt: '2026-08-17T00:30:20.936Z' }])
+  const s = spawnServer(dshEnv(fakeHome, dshDir), { cwd: fakeHome })
+  const r = createLineReader(s.stdout)
+  try {
+    s.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'swarm_state', arguments: {} } })}\n`
+    )
+    const res = JSON.parse(await r.nextLine(5000))
+    assert.equal(res.result.isError, true)
+    const text = res.result.content[0].text
+    assert.match(text, /not a project root/)
+    assert.match(text, /workspace store/, 'explains that dsh keeps the project elsewhere')
+    assert.ok(text.includes(join(dshDir, 'storages', 'workspace.json')), text)
+    assert.ok(text.includes(join(dshDir, 'cordis.patch.yml')), text)
+    assert.match(text, /GRAPHYLOOP_PROJECT_ROOT/, 'names the pin that overrides discovery')
     assert.ok(!existsSync(join(fakeHome, '.graphyloop')), 'home directory left untouched')
   } finally {
     if (s.exitCode === null) {
