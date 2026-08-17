@@ -64,6 +64,18 @@ function countMd(dir) {
   return readdirSync(dir).filter((f) => f.endsWith('.md')).length
 }
 
+// Every *.bak-* under `dir`, recursively. Walks with withFileTypes instead of
+// readdirSync's `recursive` option, which needs a newer Node than the floor.
+function countBackups(dir) {
+  if (!existsSync(dir)) return 0
+  let n = 0
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) n += countBackups(join(dir, entry.name))
+    else if (entry.name.includes('.bak-')) n += 1
+  }
+  return n
+}
+
 function countOccurrences(text, needle) {
   let n = 0
   let i = 0
@@ -311,6 +323,53 @@ test('re-running install is idempotent (no duplicate graphyloop entries)', () =>
 
   const cursorJson = JSON.parse(readFileSync(join(sandbox, '.cursor', 'mcp.json'), 'utf8'))
   assert.equal(Object.keys(cursorJson.mcpServers).filter((k) => k === 'graphyloop').length, 1, 'cursor: graphyloop once')
+})
+
+// A forced re-install used to back up and rewrite every graphyloop-owned file
+// even when the bytes already matched, so each run left ~143 dead *.bak-* copies
+// that were never pruned (measured: 582 stale backups on a real machine, 176 of
+// them in one agents/ directory). `update` forces too, so it accumulated on
+// every update as well.
+test('a forced re-install over an unchanged tree writes nothing and leaves no backup', () => {
+  // Baseline: the tree is already installed and current by this point.
+  const before = countBackups(sandbox)
+
+  const res = runCli(['install', '--home', sandbox, '--harness', 'all', '--force'])
+  assert.equal(res.status, 0, res.stdout + res.stderr)
+  assert.equal(countBackups(sandbox), before, 'no backup minted for an unchanged file')
+  assert.match(res.stdout, /same {2}.+\(unchanged\)/, 'unchanged files are reported as such')
+
+  // The report must show the work as skipped, not copied.
+  // Report rows only: "  <harness>  <present>  <copied> <skipped> <merged> <warnings>".
+  // Anchored on the present column so the "claude root: ..." log line cannot match.
+  const copiedRows = res.stdout
+    .split(/\r?\n/)
+    .filter((line) => /^ {2}(core|opencode|claude|codex|cursor|dsh)\s+(?:-|yes|no)\s+\d+/.test(line))
+  assert.ok(copiedRows.length > 0, `expected a report table, got:\n${res.stdout}`)
+  for (const row of copiedRows) {
+    const copied = Number(row.trim().split(/\s+/)[2])
+    assert.equal(copied, 0, `nothing should be copied on an unchanged forced re-run: ${row}`)
+  }
+})
+
+test('a forced re-install still backs up a file whose content actually changed', () => {
+  const agent = join(sandbox, '.config', 'opencode', 'agents', 'agent-chadi.md')
+  assert.ok(existsSync(agent), 'agent installed')
+  writeFileSync(agent, '---\nname: agent-chadi\n---\n\nHAND EDITED\n')
+  const before = countBackups(sandbox)
+
+  const res = runCli(['install', '--home', sandbox, '--harness', 'all', '--force'])
+  assert.equal(res.status, 0, res.stdout + res.stderr)
+  assert.equal(countBackups(sandbox), before + 1, 'exactly the changed file is backed up')
+
+  const backups = readdirSync(join(sandbox, '.config', 'opencode', 'agents'))
+    .filter((f) => f.startsWith('agent-chadi.md.bak-'))
+  assert.equal(backups.length, 1, `expected one backup, got ${backups}`)
+  assert.match(
+    readFileSync(join(sandbox, '.config', 'opencode', 'agents', backups[0]), 'utf8'),
+    /HAND EDITED/,
+    'the backup holds the replaced content, so the edit is recoverable'
+  )
 })
 
 test('installed MCP server runs from ~/.graphyloop (self-contained artifact)', async () => {
