@@ -4,6 +4,44 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.4.2] — 2026-08-17
+
+### Fixed
+- **`--force` backed up and rewrote every graphyloop-owned file even when the
+  bytes already matched the source.** A forced re-install of all five harnesses
+  wrote 143 files and minted 143 `*.bak-<timestamp>` copies of content that had
+  not changed — on every run. Nothing ever prunes those backups, so they
+  accumulate: a real machine had 582 stale ones (282 under `~/.claude`, 221 under
+  `~/.config/opencode`, 79 under `~/.graphyloop`), 176 of them in a single
+  `agents/` directory. A forced re-install over an unchanged tree now writes
+  nothing and leaves no backup, and stays at zero across repeated runs.
+  - `graphyloop update` forces internally, so an update carried the same cost:
+    the core path alone left 7 fresh backups every time it ran, which is exactly
+    what had filled `~/.graphyloop`.
+  - Two paths needed the check, and missing the second one is what made this
+    survive a first pass: `copyDir` (agents, commands, plugins, workflow files)
+    and `copyFile` (the `CORE_LIB_FILES` set plus `package.json`).
+  - The comparison is byte-for-byte, not decoded text: agent and skill files are
+    copied verbatim, so a string compare would treat a real CRLF or BOM
+    difference as "unchanged" and leave a stale file in place.
+  - A file whose content *did* change is still backed up before it is replaced —
+    the recovery net that makes `--force` safe is unchanged, and is now covered
+    by its own regression test.
+
+### Internal
+- New `lib/fsutil.mjs` holds the shared `matchesContent` / `matchesFile` /
+  `backupFile` helpers (plus async twins for the `fs/promises` installers). It
+  also absorbs the `timestamp()` and `backupFile()` copies that had been
+  duplicated across four installers, so the change is net smaller than the fix it
+  carries. `install-opencode` had a local `const backupFile` shadowing the new
+  import; it is now `backupPath`, which is what it always held.
+
+### Tests
+- 2 new (187 total): a forced re-install over an unchanged tree writes nothing,
+  creates no backup and reports every harness as `copied 0`; and a file that was
+  hand-edited is still backed up before it is replaced, with the backup holding
+  the replaced content.
+
 ## [0.4.1] — 2026-08-17
 
 ### Fixed
@@ -553,7 +591,9 @@ Documented and tested, but never published on its own: it ships inside 0.4.0.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
-[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/chadixearth/graphyloop/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/chadixearth/graphyloop/compare/v0.2.1...v0.4.0
 [0.2.1]: https://github.com/chadixearth/graphyloop/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/chadixearth/graphyloop/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/chadixearth/graphyloop/compare/v0.1.3...v0.1.4
