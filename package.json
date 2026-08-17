@@ -1,6 +1,6 @@
 {
   "name": "graphyloop",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Agentic workflow kit for any AI coding harness: graphyloop swarm + memory (plugin + MCP server), chadi squad agents, 5-gate workflow. Install via npx.",
   "type": "module",
   "author": "Richard Legaspi (https://github.com/chadixearth)",
@@ -76,4 +76,3 @@
     "LICENSE"
   ]
 }
-
