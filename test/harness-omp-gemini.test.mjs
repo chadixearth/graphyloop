@@ -494,7 +494,7 @@ test('stale graphyloop-shaped MCP entries are repaired without --force; custom o
   assert.equal(cursor.enabled, true)
   const toml = readFileSync(join(home, '.codex', 'config.toml'), 'utf8')
   assert.ok(toml.includes(CORE_MCP().replace(/\\/g, '\\\\')), toml)
-  assert.ok(!toml.includes('old'), 'old path gone from toml')
+  assert.ok(!toml.includes(tomlOld), 'old path gone from toml')
   assert.ok(toml.includes('[model]'), 'other toml sections kept')
   assert.deepEqual(json(join('.gemini', 'settings.json')).mcpServers.graphyloop, { command: 'python', args: ['server.py'] })
   assert.match(r.out, /mcpServers\.graphyloop already configured differently in settings\.json/)
