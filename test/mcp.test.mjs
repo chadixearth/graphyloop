@@ -276,7 +276,14 @@ test('plan_feature output carries the ctx pack path and the turn-economy footer 
   assert.match(plan.ctx.file, /ctx-[a-z0-9-]+\.md$/)
   assert.equal(plan.ctx.file.replace('ctx-', 'contract-'), plan.contract.file)
   for (const t of plan.tasks) {
-    assert.match(t.description, /Read the ctx pack and contract first, in ONE turn\./, `${t.id} missing footer`)
+    if (t.wave === 0) {
+      assert.doesNotMatch(t.description, /Read the ctx pack and contract first/, `${t.id} writes the ctx pack; must not be told to read it`)
+      assert.match(t.description, /write the ctx pack and contract before anything else\.$/, `${t.id} missing contract footer`)
+    } else {
+      assert.match(t.description, /Read the ctx pack and contract first, in ONE turn\./, `${t.id} missing footer`)
+    }
+    if (t.wave >= 2) assert.doesNotMatch(t.description, /do not run project-wide lint\/test\/build/, `${t.id} is a verifier`)
+    if (t.wave === 1) assert.match(t.description, /first edit by turn 5; do not run project-wide lint\/test\/build — the driver does\.$/, `${t.id} builder footer`)
   }
   const tools = (await rpc('tools/list', {})).result.tools
   assert.match(tools.find((t) => t.name === 'plan_feature').description, /ctx-<slug>\.md/)

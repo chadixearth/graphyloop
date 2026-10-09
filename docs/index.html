@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GraphyLoop — one-command agentic workflow kit for AI coding agents</title>
-<meta name="description" content="One npx command wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies, MIT.">
+<meta name="description" content="One npx command wires Claude Code, Codex, Gemini CLI, OpenCode, Cursor, Oh My Pi and DeepSeek Harness with a 25-agent squad, wave planning and MCP. MIT.">
+<meta name="theme-color" content="#0b1220">
 <link rel="canonical" href="https://chadixearth.github.io/graphyloop/">
 <meta name="color-scheme" content="light dark">
 <meta name="author" content="Richard Legaspi">
@@ -31,6 +32,7 @@
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Windows, macOS, Linux",
   "softwareVersion": "0.5.0",
+  "dateModified": "2026-10-09",
   "license": "https://opensource.org/licenses/MIT",
   "offers": {
     "@type": "Offer",
@@ -65,7 +67,7 @@
       "name": "Does GraphyLoop work with Claude Code, Cursor and Gemini CLI?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. For Claude Code it registers an MCP server in ~/.claude.json, installs 26 agent files and 15 /chadi-* slash commands, and adds the workflow rules. For Cursor and Windsurf it adds the MCP server to ~/.cursor/mcp.json and the rules to ~/.cursor/rules/. For Gemini CLI (since 0.5.0) it adds the MCP server to ~/.gemini/settings.json and installs the commands as TOML files in ~/.gemini/commands/; an existing GEMINI.md is never overwritten."
+        "text": "Yes. For Claude Code it registers an MCP server in ~/.claude.json, installs 26 agent files and 15 /chadi-* slash commands, and adds the workflow rules. For Cursor and Windsurf it adds the MCP server to ~/.cursor/mcp.json and the rules to ~/.cursor/rules/. For Gemini CLI (since 0.5.0) it adds the MCP server to ~/.gemini/settings.json and installs the commands as TOML files in ~/.gemini/commands/; installs the bundled skills in ~/.gemini/skills/; an existing GEMINI.md is never overwritten (the workflow loads from the graphyloop-workflow skill instead)."
       }
     },
     {
@@ -238,7 +240,7 @@ footer ul{list-style:none;padding:0;margin:0 0 14px;display:flex;flex-wrap:wrap;
 <a class="btn" href="https://github.com/chadixearth/graphyloop">Star on GitHub</a>
 </div>
 <ul class="facts" aria-label="Key facts">
-<li>7 harnesses</li><li>25-agent squad</li><li>15 MCP tools</li><li>72 skills</li><li>Zero dependencies</li><li>Node ≥ 20</li><li>MIT</li>
+<li>7 harnesses</li><li>25-agent squad</li><li>15 MCP tools</li><li>70 skills</li><li>Zero dependencies</li><li>Node ≥ 20</li><li>MIT</li>
 </ul>
 </div>
 
@@ -261,7 +263,7 @@ footer ul{list-style:none;padding:0;margin:0 0 14px;display:flex;flex-wrap:wrap;
 <li class="card"><h3>Cursor / Windsurf</h3><p class="tag"><code>--harness cursor</code></p><p>MCP server plus the workflow as an AGENTS.md rule.</p></li>
 <li class="card"><h3>DeepSeek Harness</h3><p class="tag"><code>--harness dsh</code></p><p>MCP server, 26 role prompts and the <code>graphyloop-squad</code> skill.</p></li>
 <li class="card"><h3>Oh My Pi</h3><p class="tag"><code>--harness omp</code></p><p>MCP server in <code>~/.omp/agent/mcp.json</code>, 26 squad agents, skills. New in 0.5.0.</p></li>
-<li class="card"><h3>Gemini CLI</h3><p class="tag"><code>--harness gemini</code></p><p>MCP server in <code>~/.gemini/settings.json</code> and <code>/chadi-*</code> TOML commands. New in 0.5.0.</p></li>
+<li class="card"><h3>Gemini CLI</h3><p class="tag"><code>--harness gemini</code></p><p>MCP server in <code>~/.gemini/settings.json</code>, <code>/chadi-*</code> TOML commands and the bundled skills in <code>~/.gemini/skills/</code>. New in 0.5.0.</p></li>
 </ul>
 <p>Per-harness file locations and verification: <a href="https://github.com/chadixearth/graphyloop/blob/main/docs/harnesses.md">harness guide</a>.</p>
 </section>
@@ -288,7 +290,7 @@ footer ul{list-style:none;padding:0;margin:0 0 14px;display:flex;flex-wrap:wrap;
 <li class="card"><h3>Wave planner</h3><p><code>plan_feature</code> turns a request into contract, parallel builders, integration and parallel verifiers.</p></li>
 <li class="card"><h3>Universal MCP bridge</h3><p>15 tools that work in every MCP-capable harness.</p></li>
 <li class="card"><h3>15 slash commands</h3><p><code>/chadi-init</code>, <code>/chadi-plan</code>, <code>/chadi-review</code>, <code>/chadi-deploy</code> and more.</p></li>
-<li class="card"><h3>72 bundled skills</h3><p>Contract-first waves, API hardening, accessibility, Supabase, Vercel, secrets. Your own skills are never overwritten.</p></li>
+<li class="card"><h3>70 bundled skills</h3><p>Contract-first waves, API hardening, accessibility, Supabase, Vercel, secrets. Your own skills are never overwritten.</p></li>
 <li class="card"><h3>Config safety</h3><p>Timestamped backups, no overwritten keys, idempotent re-runs, uninstall removes only byte-identical files.</p></li>
 <li class="card"><h3>Zero dependencies</h3><p>Pure Node 20+, MIT licensed, identical on Windows, macOS and Linux.</p></li>
 </ul>

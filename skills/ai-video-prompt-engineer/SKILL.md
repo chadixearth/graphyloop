@@ -112,7 +112,7 @@ Ask **ONE question at a time** via the `question` tool. Do NOT batch questions. 
 ### File Output
 
 Save the unified prompt to a timestamped file:
-- Path: `C:\Users\richa\AppData\Local\Temp\opencode\<topic>-<duration>-prompts.md`
+- Path: `<temp-dir>/<topic>-<duration>-prompts.md` (the OS temp directory, e.g. `$TMPDIR` or `%TEMP%`)
 - Show user the file path at end
 
 ## Example Output Structure

@@ -2,7 +2,7 @@
 
 > GraphyLoop is a one-command agentic workflow kit for AI coding agents: it wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies.
 
-Facts: version 0.5.0 · 7 harnesses · 25-agent squad (26 agent files including the driver) · 15 slash commands · 15 MCP tools · 72 bundled skills · zero runtime dependencies · Node.js >= 20 · MIT license · free, no API keys required, runs locally. Install: `npx graphyloop`.
+Facts: version 0.5.0 · 7 harnesses · 25-agent squad (26 agent files including the driver) · 15 slash commands · 15 MCP tools · 70 bundled skills · zero runtime dependencies · Node.js >= 20 · MIT license · free, no API keys required, runs locally. Install: `npx graphyloop`.
 
 ## Start here
 
@@ -24,7 +24,7 @@ Facts: version 0.5.0 · 7 harnesses · 25-agent squad (26 agent files including 
 - [GitHub repository](https://github.com/chadixearth/graphyloop): source and issues
 - [MCP server and engine](https://github.com/chadixearth/graphyloop/blob/main/lib/mcp.mjs): the 15 MCP tools (plan_feature, task_distribute, memory_search, memory_store, ...)
 - [Squad agents](https://github.com/chadixearth/graphyloop/tree/main/agents): the agent prompts
-- [Bundled skills](https://github.com/chadixearth/graphyloop/tree/main/skills): 72 skills
+- [Bundled skills](https://github.com/chadixearth/graphyloop/tree/main/skills): 70 skills
 
 ## Optional
 

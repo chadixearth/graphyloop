@@ -51,7 +51,9 @@ Wall clock = Wave 0 + slowest builder + integration + slowest verifier. Never th
    name what they are waiting on.
 4. **Fan out a whole wave in ONE tool-call block.** Every prompt carries: the
    contract and ctx pack paths, that lane's exclusive file list, its acceptance
-   check, and the turn-economy footer verbatim: `Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; first edit by turn 5; do not run project-wide lint/test/build — the driver does.`
+   check, and the turn-economy footer verbatim. Builder lanes (wave 1) get: `Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; first edit by turn 5; do not run project-wide lint/test/build — the driver does.`
+   The wave-0 lane that writes the ctx pack and contract gets: `Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; write the ctx pack and contract before anything else.`
+   Integration, verify and deploy lanes (they run tests and builds) get: `Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file.`
 5. **Record every result.** `task_record` returns what the result unblocked —
    that is the trigger for the next wave. After a restart or compaction,
    `swarm_state` reports `readyTasks`, `blockedTasks` and per-wave counts.

@@ -300,6 +300,26 @@ test('distribute routes a task to a capability-matched agent', () => {
   assert.equal(res.assignments[0].opencodeAgentType, 'chadi-backend')
 })
 
+test('distribute appends the footer for the lane kind exactly once and never duplicates one already present', () => {
+  const BUILDER = 'Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; first edit by turn 5; do not run project-wide lint/test/build — the driver does.'
+  const CONTRACT = 'Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; write the ctx pack and contract before anything else.'
+  const VERIFIER = 'Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file.'
+  cli(['init'])
+  cli(['spawn', '--type', 'coder', '--id', 'coder-1'])
+  const res = cli(['distribute', '--tasks', JSON.stringify([
+    { id: 'plain', type: 'code', description: 'no footer yet', priority: 'low' },
+    { id: 'w0', type: 'code', wave: 0, description: `already has one ${CONTRACT}`, priority: 'low' },
+    { id: 'w3', type: 'code', wave: 3, dependsOn: [], description: `has verifier ${VERIFIER}`, priority: 'low' },
+    { id: 'w3b', type: 'code', wave: 3, dependsOn: [], description: 'bare verify brief', priority: 'low' },
+  ])])
+  const prompt = (id) => res.assignments.find((a) => a.taskId === id).prompt
+  const count = (s, f) => s.split(f).length - 1
+  assert.ok(prompt('plain').endsWith(BUILDER) && count(prompt('plain'), BUILDER) === 1)
+  assert.ok(prompt('w0').endsWith(CONTRACT) && count(prompt('w0'), CONTRACT) === 1)
+  assert.ok(prompt('w3').endsWith(VERIFIER) && count(prompt('w3'), VERIFIER) === 1)
+  assert.ok(prompt('w3b').endsWith(VERIFIER) && !prompt('w3b').includes('do not run project-wide'))
+})
+
 test('record reports whether the task and agent were actually found', () => {
   cli(['init'])
   cli(['spawn', '--type', 'coder', '--id', 'coder-1'])

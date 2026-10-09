@@ -410,3 +410,162 @@ test('all-harness install then doctor reports 7 wired rows and DOCTOR_OK', () =>
   }
   assert.match(r.out, /GRAPH_LOOP_DOCTOR_OK/)
 })
+
+// ---------------------------------------------------------------------------
+// v0.5.0 final iteration: argv safety, tolerant JSON, stale MCP repair, skill
+// manifest refresh, gemini skills, uninstall of core package.json.
+// ---------------------------------------------------------------------------
+
+import { createHash } from 'node:crypto'
+import { bundledSkills } from '../lib/install-skills.mjs'
+import { AUTHORED_SKILLS } from '../lib/engine.mjs'
+
+const CORE_MCP = () => join(home, '.graphyloop', 'mcp-server.mjs')
+const sha = (text) => createHash('sha256').update(text).digest('hex')
+
+test('bare --dry-run / --json / --check / --doctor / -help exit 1 and write nothing', () => {
+  for (const flag of ['--dry-run', '--json', '--check', '--doctor', '-help']) {
+    const r = cli(flag, '--home', home)
+    assert.equal(r.code, 1, flag + ': ' + r.out + r.err)
+    assert.match(r.err, new RegExp('unknown option "' + flag + '" \\(no command given\\)'))
+    assert.deepEqual(readdirSync(home), [], flag + ' wrote files')
+  }
+})
+
+test('install --dry-run / --check exit 1 and write nothing', () => {
+  for (const flag of ['--dry-run', '--check']) {
+    const r = cli('install', flag, '--home', home)
+    assert.equal(r.code, 1, r.out + r.err)
+    assert.match(r.err, /install has no dry-run; preview with: graphyloop doctor/)
+    assert.deepEqual(readdirSync(home), [])
+  }
+})
+
+test('bare --home X --harness omp still installs', () => {
+  const r = cli('--home', home, '--harness', 'omp')
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.ok(existsSync(join(home, '.omp', 'agent', 'mcp.json')))
+})
+
+test('gemini settings.json with a // comment warns, skips only that merge, other harnesses install', () => {
+  const settings = seed(join('.gemini', 'settings.json'), '// my comment\n{ "theme": "x" }\n')
+  const r = cli('install', '--harness', 'gemini,omp', '--home', home)
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.match(r.out, /could not parse settings\.json \(.+\); add the graphyloop MCP entry by hand: \{"mcpServers"/)
+  assert.equal(readFileSync(settings, 'utf8'), '// my comment\n{ "theme": "x" }\n', 'user file untouched')
+  assert.ok(json(join('.omp', 'agent', 'mcp.json')).mcpServers.graphyloop, 'omp still wired')
+  assert.ok(existsSync(join(home, '.gemini', 'commands', COMMAND_NAMES[0] + '.toml')), 'rest of gemini installed')
+  const doc = cli('doctor', '--home', home)
+  assert.match(doc.out, /gemini\s+present\s+no\b/)
+  assert.match(doc.out, /omp\s+present\s+yes\b/)
+})
+
+test('an unparsable omp mcp.json warns instead of aborting', () => {
+  seed(join('.omp', 'agent', 'mcp.json'), '{ // jsonc\n}')
+  const r = cli('install', '--harness', 'omp,gemini', '--home', home)
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.match(r.out, /could not parse mcp\.json/)
+  assert.ok(json(join('.gemini', 'settings.json')).mcpServers.graphyloop, 'gemini still wired')
+})
+
+test('an empty gemini settings.json is treated as {}', () => {
+  seed(join('.gemini', 'settings.json'), '  \n')
+  const r = cli('install', '--harness', 'gemini', '--home', home)
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.deepEqual(json(join('.gemini', 'settings.json')).mcpServers.graphyloop.args, [CORE_MCP()])
+})
+
+test('stale graphyloop-shaped MCP entries are repaired without --force; custom ones are kept', () => {
+  const stale = { command: 'node', args: [join(home, 'old', 'mcp-server.mjs')] }
+  seed(join('.omp', 'agent', 'mcp.json'), JSON.stringify({ mcpServers: { graphyloop: stale, other: { command: 'x' } } }))
+  seed('.claude.json', JSON.stringify({ mcpServers: { graphyloop: stale } }))
+  seed(join('.cursor', 'mcp.json'), JSON.stringify({ mcpServers: { graphyloop: { ...stale, enabled: true } } }))
+  seed(join('.gemini', 'settings.json'), JSON.stringify({ mcpServers: { graphyloop: { command: 'python', args: ['server.py'] } } }))
+  const tomlOld = join(home, 'old', 'mcp-server.mjs').replace(/\\/g, '\\\\')
+  seed(join('.codex', 'config.toml'), '[model]\nname = "x"\n\n[mcp_servers.graphyloop]\ncommand = "node"\nargs = ["' + tomlOld + '"]\n')
+
+  const r = cli('install', '--harness', 'omp,claude,cursor,gemini,codex', '--home', home)
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.deepEqual(json(join('.omp', 'agent', 'mcp.json')).mcpServers.graphyloop.args, [CORE_MCP()])
+  assert.ok(json(join('.omp', 'agent', 'mcp.json')).mcpServers.other, 'other server kept')
+  assert.deepEqual(json('.claude.json').mcpServers.graphyloop.args, [CORE_MCP()])
+  const cursor = json(join('.cursor', 'mcp.json')).mcpServers.graphyloop
+  assert.deepEqual(cursor.args, [CORE_MCP()])
+  assert.equal(cursor.enabled, true)
+  const toml = readFileSync(join(home, '.codex', 'config.toml'), 'utf8')
+  assert.ok(toml.includes(CORE_MCP().replace(/\\/g, '\\\\')), toml)
+  assert.ok(!toml.includes('old'), 'old path gone from toml')
+  assert.ok(toml.includes('[model]'), 'other toml sections kept')
+  assert.deepEqual(json(join('.gemini', 'settings.json')).mcpServers.graphyloop, { command: 'python', args: ['server.py'] })
+  assert.match(r.out, /mcpServers\.graphyloop already configured differently in settings\.json/)
+  assert.ok(backups(join(home, '.omp', 'agent')) >= 1, 'omp mcp.json backed up')
+  assert.ok(backups(join(home, '.codex')) >= 1, 'codex config backed up')
+  const doc = cli('doctor', '--home', home)
+  assert.match(doc.out, /omp\s+present\s+yes\b/)
+})
+
+test('gemini installs bundled skills and the own-GEMINI.md warning mentions graphyloop-workflow', () => {
+  seed(join('.gemini', 'GEMINI.md'), '# mine\n')
+  const r = cli('install', '--harness', 'gemini', '--home', home)
+  assert.equal(r.code, 0, r.out + r.err)
+  for (const name of bundledSkills()) {
+    assert.ok(existsSync(join(home, '.gemini', 'skills', name, 'SKILL.md')), name)
+  }
+  assert.ok(existsSync(join(home, '.gemini', 'skills', bundledSkills()[0], '.graphyloop-manifest.json')))
+  assert.match(r.out, /kept your GEMINI\.md; .*graphyloop-workflow/)
+  assert.equal(cli('uninstall', '--harness', 'gemini', '--home', home).code, 0)
+  assert.ok(!existsSync(join(home, '.gemini', 'skills', bundledSkills()[0])), 'gemini skills removed on uninstall')
+})
+
+test('skill refresh: untouched older copy refreshed, edited copy kept, legacy authored backed up on update only', () => {
+  const skillsRoot = join(home, '.omp', 'agent', 'skills')
+  const authored = AUTHORED_SKILLS.find((n) => bundledSkills().includes(n))
+  const third = bundledSkills().find((n) => !AUTHORED_SKILLS.includes(n))
+  assert.ok(authored && third)
+  assert.equal(cli('install', '--harness', 'omp', '--home', home).code, 0)
+  const srcText = (n) => readFileSync(join(REPO_ROOT, 'skills', n, 'SKILL.md'), 'utf8')
+  const manifestOf = (n) => join(skillsRoot, n, '.graphyloop-manifest.json')
+
+  // untouched older version (manifest matches the old content) -> refreshed on plain install
+  const old = 'OLD SHIPPED VERSION\n'
+  writeFileSync(join(skillsRoot, authored, 'SKILL.md'), old)
+  const m = JSON.parse(readFileSync(manifestOf(authored), 'utf8'))
+  m.version = '0.0.1'
+  m.files['SKILL.md'] = sha(old)
+  writeFileSync(manifestOf(authored), JSON.stringify(m))
+
+  // user-modified (content no longer matches manifest) -> kept
+  writeFileSync(join(skillsRoot, third, 'SKILL.md'), 'EDITED BY USER\n')
+
+  const r = cli('install', '--harness', 'omp', '--home', home)
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.equal(readFileSync(join(skillsRoot, authored, 'SKILL.md'), 'utf8'), srcText(authored), 'refreshed')
+  assert.equal(JSON.parse(readFileSync(manifestOf(authored), 'utf8')).files['SKILL.md'], sha(srcText(authored)))
+  assert.equal(readFileSync(join(skillsRoot, third, 'SKILL.md'), 'utf8'), 'EDITED BY USER\n', 'edited kept')
+
+  // legacy (no manifest): kept on plain install and on update for third-party; authored replaced on update only
+  rmSync(manifestOf(authored))
+  writeFileSync(join(skillsRoot, authored, 'SKILL.md'), 'LEGACY AUTHORED\n')
+  rmSync(manifestOf(third), { force: true })
+  assert.equal(cli('install', '--harness', 'omp', '--home', home).code, 0)
+  assert.equal(readFileSync(join(skillsRoot, authored, 'SKILL.md'), 'utf8'), 'LEGACY AUTHORED\n', 'plain install keeps legacy')
+  assert.equal(backups(skillsRoot), 0)
+
+  assert.equal(cli('update', '--harness', 'omp', '--home', home).code, 0)
+  assert.equal(readFileSync(join(skillsRoot, authored, 'SKILL.md'), 'utf8'), srcText(authored), 'update replaced legacy authored')
+  assert.equal(readdirSync(skillsRoot).filter((n) => n.includes('.bak-')).length, 0, 'no backup inside the scanned skills root')
+  const bakRoot = join(skillsRoot, '..', '.graphyloop-skill-backups')
+  const bak = readdirSync(bakRoot).filter((n) => n.startsWith(authored + '.bak-'))
+  assert.equal(bak.length, 1, 'legacy copy backed up')
+  assert.equal(readFileSync(join(bakRoot, bak[0], 'SKILL.md'), 'utf8'), 'LEGACY AUTHORED\n')
+  assert.equal(readFileSync(join(skillsRoot, third, 'SKILL.md'), 'utf8'), 'EDITED BY USER\n', 'third-party legacy kept on update')
+})
+
+test('uninstall removes the core package.json and skill manifests', () => {
+  assert.equal(cli('install', '--harness', 'omp', '--home', home).code, 0)
+  assert.ok(existsSync(join(home, '.graphyloop', 'package.json')))
+  const r = cli('uninstall', '--harness', 'omp', '--home', home)
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.ok(!existsSync(join(home, '.graphyloop', 'package.json')), 'core package.json removed')
+  assert.ok(!existsSync(join(home, '.omp', 'agent', 'skills', bundledSkills()[0])), 'skill dir (incl. manifest) removed')
+})

@@ -23,7 +23,10 @@ bump may still change behaviour.
 - `/chadi-*` commands, Codex prompts and the dsh `graphyloop-squad` skill
   aligned with Workflow v2; `/chadi-recall` uses graphyloop memory.
 - **Bare `npx graphyloop` now installs** (it used to print help; `--help` still
-  does). `--harness` accepts a comma list (`--harness claude,omp`).
+  does). `--harness` accepts a comma list (`--harness claude,omp`). A bare
+  command with any other flag (`--dry-run`, `--json`, a typo like `--doctor`)
+  exits 1 and writes nothing, and `install --dry-run` is refused with a pointer
+  to `graphyloop doctor` — a mistyped flag can never trigger a real install.
 - `graphyloop doctor` adds a **wired** column (entry exists *and* points at an
   existing server/plugin), a `fix:` command per unwired harness, and a final
   `GRAPH_LOOP_DOCTOR_OK` / `GRAPH_LOOP_DOCTOR_ISSUES <n>` line. Exit code is
@@ -35,17 +38,31 @@ bump may still change behaviour.
   (other servers and `disabledServers` kept), 26 squad agents (model-neutral),
   bundled skills, and `AGENTS.md` only when you have none.
 - **Gemini CLI (`gemini`) harness**: MCP server merged into
-  `~/.gemini/settings.json`, 15 `/chadi-*` TOML commands, and `GEMINI.md` only
-  when you have none.
+  `~/.gemini/settings.json`, 15 `/chadi-*` TOML commands, bundled skills in
+  `~/.gemini/skills/`, and `GEMINI.md` only when you have none.
+- A JSON config graphyloop cannot parse (e.g. a `settings.json` with comments)
+  is left untouched with a copy-paste snippet; the rest of the install
+  continues, and doctor reports that harness as not wired.
+- A stale `graphyloop` MCP entry (pointing at a moved or missing server) is
+  repaired automatically, with a backup, in Claude Code, Cursor, Codex, Oh My Pi
+  and Gemini CLI. A hand-customised entry is kept with a warning.
+- **Bundled skills now refresh on update.** Each installed skill carries a
+  `.graphyloop-manifest.json` of file hashes: an untouched copy is refreshed
+  when the shipped version changes, an edited one is yours and kept. Pre-0.5
+  copies of graphyloop-authored skills are backed up to
+  `.graphyloop-skill-backups/` (outside the skills root, so no duplicate skill
+  appears) and replaced by `update` only.
 - An existing `AGENTS.md` / `GEMINI.md` in those harnesses is **never**
   overwritten, not even by `--force` or `update` — the install warns instead.
 - **Context pack in the engine**: `plan_feature` Wave 0 now freezes
-  `ctx-<slug>.md` next to the contract; every lane brief and every
-  `task_distribute` prompt ends with the turn-economy footer; plans report
+  `ctx-<slug>.md` next to the contract; every builder brief and builder
+  `task_distribute` prompt ends with the turn-economy footer, the wave-0
+  contract writer and the integration/verify/deploy lanes get matching
+  variants (verifiers are never told not to run tests); plans report
   `inlineThreshold: 3`. Additive — existing fields are unchanged.
 - `skills_status` also scans `~/.omp/agent/skills` and `~/.gemini/skills`.
 - New bundled skill `graphyloop-workflow` (the condensed workflow, loaded on
-  demand by harnesses that keep their own rules file). 72 bundled skills.
+  demand by harnesses that keep their own rules file).
 - **Discoverability**: README rewritten answer-first (Quick Start, harness
   table, workflow diagram, FAQ, comparison); long reference moved to
   `docs/reference.md` and `docs/harnesses.md`; GitHub Pages landing page
@@ -53,16 +70,27 @@ bump may still change behaviour.
   sitemap, robots); `llms.txt`; `CITATION.cff`; npm description, homepage and
   keywords updated.
 
+### Removed
+- The client-specific `lifewood-branding` and `ppt-master-branding` skills no
+  longer ship (70 bundled skills), a personal absolute path was stripped from
+  `ai-video-prompt-engineer`, and `!skills/*.zip` keeps stray archives out of
+  the tarball. `uninstall` also removes `~/.graphyloop/package.json`.
+- The `prepare-commit-msg` hook that appended AI co-author trailers to every
+  commit; the repository history no longer carries them.
+
 ### Release pipeline
 - `publish.yml` publishes with **npm trusted publishing (OIDC) and
   provenance**; `NPM_TOKEN` is a fallback and an invalid token is a warning
   instead of a hard failure (it had blocked the v0.4.0/v0.4.1 tag publishes).
+  Publishing is limited to `v*` tags and `main`; npm is upgraded only when the
+  runner's copy predates trusted-publishing support.
 
 ### Tests
-- 211 total (was 187): new `harness-omp-gemini` suite (18 tests: wiring,
+- 222 total (was 187): new `harness-omp-gemini` suite (28 tests: wiring,
   never-clobber with and without `--force`, idempotent re-install, uninstall,
-  doctor, comma lists, bare install, TOML round-trip) plus planner, MCP and
-  adapter coverage for the context pack, footer and new skills roots.
+  doctor, comma lists, bare install and stray-flag refusal, unparsable configs,
+  stale-entry repair, skill refresh/keep/legacy backup) plus planner, MCP and
+  adapter coverage for the context pack, footer variants and new skills roots.
 
 ## [0.4.2] — 2026-08-17
 

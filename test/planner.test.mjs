@@ -70,6 +70,9 @@ test('an inventory system plans database, backend and frontend in ONE parallel w
 })
 
 const FOOTER = 'Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; first edit by turn 5; do not run project-wide lint/test/build — the driver does.'
+const CONTRACT_FOOTER = 'Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; write the ctx pack and contract before anything else.'
+const VERIFIER_FOOTER = 'Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file.'
+const footerOf = (t) => (t.wave === 0 ? CONTRACT_FOOTER : t.wave === 1 ? FOOTER : VERIFIER_FOOTER)
 
 test('wave 0 freezes a context pack next to the contract, and every lane brief ends with the turn-economy footer', () => {
   const plan = cli(['plan', '--goal', INVENTORY])
@@ -85,7 +88,15 @@ test('wave 0 freezes a context pack next to the contract, and every lane brief e
   assert.ok(w0.description.includes(plan.ctx.file))
 
   for (const t of plan.tasks) {
-    assert.ok(t.description.endsWith(FOOTER), `${t.id} brief must end with the turn-economy footer`)
+    assert.ok(t.description.endsWith(footerOf(t)), `${t.id} brief must end with its lane's footer`)
+  }
+  assert.ok(!w0.description.includes('Read the ctx pack and contract first'), 'wave 0 writes the ctx pack, it must not be told to read it')
+  for (const t of plan.tasks.filter((x) => x.wave === 1)) {
+    assert.ok(t.description.endsWith(FOOTER), `${t.id} (builder, incl. test-writing lane) must carry the exact builder footer`)
+  }
+  for (const t of plan.tasks.filter((x) => x.wave >= 2)) {
+    assert.ok(!t.description.includes('do not run project-wide lint/test/build'), `${t.id} runs tests/builds; it must not be told not to`)
+    assert.ok(t.description.includes('Read the ctx pack and contract first'), `${t.id} verifier footer reads the ctx pack`)
   }
   for (const t of plan.tasks.filter((x) => x.wave >= 1)) {
     assert.ok(t.description.includes(plan.ctx.file), `${t.id} brief must name the ctx pack`)
@@ -98,13 +109,17 @@ test('no-fanout plans report the inline threshold', () => {
   assert.equal(plan.inlineThreshold, 3)
 })
 
-test('distribute prompts carry the footer exactly once, as the last line', () => {
+test('distribute prompts carry their lane footer exactly once, as the last line', () => {
   seedSwarm()
   const plan = cli(['plan', '--goal', INVENTORY])
   const res = cli(['distribute', '--tasks', JSON.stringify(plan.tasks)])
+  const byId = new Map(plan.tasks.map((t) => [t.id, t]))
   for (const a of res.assignments) {
-    assert.ok(a.prompt.endsWith(FOOTER), `${a.taskId} prompt must end with the footer`)
-    assert.equal(a.prompt.split(FOOTER).length - 1, 1, `${a.taskId} footer must appear once`)
+    const f = footerOf(byId.get(a.taskId))
+    assert.ok(a.prompt.endsWith(f), `${a.taskId} prompt must end with its footer`)
+    for (const other of [FOOTER, CONTRACT_FOOTER, VERIFIER_FOOTER]) {
+      assert.equal(a.prompt.split(other).length - 1, other === f ? 1 : 0, `${a.taskId}: footer ${other === f ? 'must appear once' : 'variant must be absent'}`)
+    }
   }
 })
 

@@ -364,7 +364,7 @@ export default async (input) => {
       }),
 
       graphyloop_skills: tool({
-        description: 'Which skills are installed on this machine (project .opencode/skills, .dsh/skills, .agents/skills; ~/.config/opencode/skills, ~/.claude/skills, ~/.dsh/skills, ~/.omp/agent/skills, ~/.gemini/skills, ~/.agents/skills), which graphyloop-bundled skills are present (72, of which 12 are graphyloop-authored: graphyloop-waves, graphyloop-workflow, api-contract-design, api-hardening, frontend-security, web-accessibility, web-performance, dependency-audit, supabase-setup, vercel-deploy, secrets-hygiene, swarm-memory), and which skills the squad routes on but are missing. Check here instead of guessing — a missing skill is reported in one line, never faked.',
+        description: 'Which skills are installed on this machine (project .opencode/skills, .dsh/skills, .agents/skills; ~/.config/opencode/skills, ~/.claude/skills, ~/.dsh/skills, ~/.omp/agent/skills, ~/.gemini/skills, ~/.agents/skills), which graphyloop-bundled skills are present (70, of which 12 are graphyloop-authored: graphyloop-waves, graphyloop-workflow, api-contract-design, api-hardening, frontend-security, web-accessibility, web-performance, dependency-audit, supabase-setup, vercel-deploy, secrets-hygiene, swarm-memory), and which skills the squad routes on but are missing. Check here instead of guessing — a missing skill is reported in one line, never faked.',
         args: {},
         async execute() {
           return JSON.stringify(runCli(['skills'], projectDir), null, 2);

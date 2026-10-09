@@ -31,6 +31,8 @@ permissions:
 
 jobs:
   publish:
+    # Releases come from a v* tag or a manual run on main, never a feature branch.
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -39,9 +41,11 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org/
 
-      # Trusted publishing needs npm >= 11.5.1.
-      - name: Update npm
-        run: npm install -g npm@latest && npm --version
+      # Trusted publishing needs npm >= 11.5.1; upgrade only when the bundled npm is older.
+      - name: Ensure npm supports trusted publishing
+        run: |
+          node -e "const [a,b,c]=process.argv[1].split('.').map(Number);process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)" "$(npm --version)" || npm install -g npm@11
+          npm --version
 
       - name: Tag matches package.json version (gate)
         if: startsWith(github.ref, 'refs/tags/v')

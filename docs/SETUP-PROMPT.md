@@ -27,7 +27,7 @@ Steps:
    - Cursor (if present): ~/.cursor/mcp.json has a "graphyloop" entry.
    - DeepSeek Harness (if present): ~/.dsh/cordis.patch.yml contains a row `id: graphyloop-mcp` naming '@deepseek-ai/dsh-mcp-client', ~/.dsh/AGENTS.md exists, and ~/.dsh/skills/ holds graphyloop-squad. Optional deeper check: `dsh --profile headless --dump-config` prints that row. In dsh the tools are namespaced — call them as mcp__graphyloop__<name> (e.g. mcp__graphyloop__swarm_state).
    - Oh My Pi (if present): ~/.omp/agent/mcp.json has mcpServers.graphyloop, and ~/.omp/agent/agents/ holds the squad .md files. An existing ~/.omp/agent/AGENTS.md is intentionally kept — the workflow then loads from the bundled skill graphyloop-workflow.
-   - Gemini CLI (if present): ~/.gemini/settings.json has mcpServers.graphyloop, and ~/.gemini/commands/chadi-init.toml exists. An existing ~/.gemini/GEMINI.md is intentionally kept.
+   - Gemini CLI (if present): ~/.gemini/settings.json has mcpServers.graphyloop, ~/.gemini/commands/chadi-init.toml exists, and ~/.gemini/skills/graphyloop-workflow/ exists. An existing ~/.gemini/GEMINI.md is intentionally kept.
    - If any check fails: re-run the install with --force (automatic backups) and re-verify. Still failing? Report the exact error and stop.
 4. Wrap up: tell the user to RESTART their harness (close/reopen the terminal or editor), open a real project (not their home directory), and start the workflow: ask for /chadi-init (OpenCode, Claude Code, Gemini CLI), /prompts:chadi-init (Codex), or "run the graphyloop workflow init" (Oh My Pi, Cursor, Windsurf). In the DeepSeek Harness there are no slash commands: ask the agent to load the `graphyloop-squad` skill instead. Give a one-line summary of what was installed.
 

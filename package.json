@@ -82,6 +82,7 @@
     "plugin",
     "agents",
     "skills",
+    "!skills/*.zip",
     "!skills/**/__pycache__/**",
     "!skills/**/*.pyc",
     "!skills/last30days/assets/**",

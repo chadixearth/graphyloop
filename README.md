@@ -38,7 +38,7 @@ Requires Node.js ≥ 20. On a fresh machine with no harness yet, GraphyLoop wire
 | **Cursor / Windsurf** | `cursor` | `~/.cursor/` | MCP server + AGENTS.md rule | ask: "run the graphyloop workflow init" |
 | **DeepSeek Harness** | `dsh` | `~/.dsh/` or `$DSH_HOME` | MCP server + 26 role prompts + `graphyloop-squad` skill + AGENTS.md | load the `graphyloop-squad` skill |
 | **Oh My Pi** | `omp` | `~/.omp/` | MCP server in `~/.omp/agent/mcp.json` + 26 squad agents + skills; AGENTS.md only if you have none | ask: "run the graphyloop workflow init" |
-| **Gemini CLI** | `gemini` | `~/.gemini/` | MCP server in `~/.gemini/settings.json` + `/chadi-*` TOML commands; GEMINI.md only if you have none | `/chadi-init` |
+| **Gemini CLI** | `gemini` | `~/.gemini/` | MCP server in `~/.gemini/settings.json` + `/chadi-*` TOML commands + bundled skills in `~/.gemini/skills/`; GEMINI.md only if you have none | `/chadi-init` |
 
 Per-harness file locations, verification and dsh notes: [docs/harnesses.md](docs/harnesses.md).
 
@@ -69,7 +69,7 @@ Steps:
    - Cursor (if present): ~/.cursor/mcp.json has a "graphyloop" entry.
    - DeepSeek Harness (if present): ~/.dsh/cordis.patch.yml contains a row `id: graphyloop-mcp` naming '@deepseek-ai/dsh-mcp-client', ~/.dsh/AGENTS.md exists, and ~/.dsh/skills/ holds graphyloop-squad. Optional deeper check: `dsh --profile headless --dump-config` prints that row. In dsh the tools are namespaced — call them as mcp__graphyloop__<name> (e.g. mcp__graphyloop__swarm_state).
    - Oh My Pi (if present): ~/.omp/agent/mcp.json has mcpServers.graphyloop, and ~/.omp/agent/agents/ holds the squad .md files. An existing ~/.omp/agent/AGENTS.md is intentionally kept — the workflow then loads from the bundled skill graphyloop-workflow.
-   - Gemini CLI (if present): ~/.gemini/settings.json has mcpServers.graphyloop, and ~/.gemini/commands/chadi-init.toml exists. An existing ~/.gemini/GEMINI.md is intentionally kept.
+   - Gemini CLI (if present): ~/.gemini/settings.json has mcpServers.graphyloop, ~/.gemini/commands/chadi-init.toml exists, and ~/.gemini/skills/graphyloop-workflow/ exists. An existing ~/.gemini/GEMINI.md is intentionally kept.
    - If any check fails: re-run the install with --force (automatic backups) and re-verify. Still failing? Report the exact error and stop.
 4. Wrap up: tell the user to RESTART their harness (close/reopen the terminal or editor), open a real project (not their home directory), and start the workflow: ask for /chadi-init (OpenCode, Claude Code, Gemini CLI), /prompts:chadi-init (Codex), or "run the graphyloop workflow init" (Oh My Pi, Cursor, Windsurf). In the DeepSeek Harness there are no slash commands: ask the agent to load the `graphyloop-squad` skill instead. Give a one-line summary of what was installed.
 
@@ -104,7 +104,7 @@ flowchart LR
 10. **Artifact wave** for posters, decks, PDFs and video — freeze `brief-<slug>.md`, hero piece first, one lane per artifact.
 11. **Evidence-first report** — Changed / Files / Verified (verbatim output) / Skills / Blocked.
 
-The `plan_feature` MCP tool does steps 3–5 for you: it returns the wave plan, writes the contract and context pack, and ends every lane brief with the turn-economy footer.
+The `plan_feature` MCP tool does steps 3–5 for you: it returns the wave plan, writes the contract and context pack, and ends every builder lane brief with the turn-economy footer (the wave-0 lane that writes the contract and the integration/verify/deploy lanes get two shorter variants).
 
 ## Features
 
@@ -117,7 +117,7 @@ The `plan_feature` MCP tool does steps 3–5 for you: it returns the wave plan, 
 | 🔌 **Universal MCP bridge** | The same 15 graphyloop tools work in all 7 harnesses — any MCP-capable harness |
 | 📋 **15 slash commands** | `chadi-init` · `chadi-fast` · `chadi-review` · `chadi-plan` · `chadi-waves` · `chadi-db` · `chadi-deploy` · `chadi-audit` · `chadi-release` · `chadi-research` · `chadi-confusing` · `chadi-discuss` · `chadi-go` · `chadi-recall` · `chadi-skills` |
 | 🔑 **Supabase + Vercel credentials** | Store keys once per project (chmod 600, git-ignored before the first write), sync them into the env file the framework reads, and preflight database/deploy work. Values are never returned to the model |
-| 📚 **72 bundled skills** | Contract-first waves, API hardening, frontend security, accessibility, web performance, dependency audit, Supabase, Vercel, secrets, memory, the workflow itself, plus a curated library of design, research, GSAP and three.js packs. A skill you already have is never overwritten ([details](docs/reference.md#configuration)) |
+| 📚 **70 bundled skills** | Contract-first waves, API hardening, frontend security, accessibility, web performance, dependency audit, Supabase, Vercel, secrets, memory, the workflow itself, plus a curated library of design, research, GSAP and three.js packs. A skill you already have is never overwritten ([details](docs/reference.md#configuration)) |
 | 🔒 **Config safety** | Timestamped backups before every write, never overwrites your config keys, idempotent re-runs, uninstall removes only byte-identical copies |
 | 🪟 **Windows hang guard** | `npm run dev` inside an agent session no longer freezes the turn: server-guard starts the server without inheriting the tool's stdout pipe, so the call returns in milliseconds while the server keeps serving |
 | ⚡ **Zero dependencies** | Pure Node (≥ 20), no npm packages at runtime, no shell scripts — installs the same on every platform. MIT licensed |
@@ -227,9 +227,11 @@ npx graphyloop mcp                  # run the MCP server directly (stdio)
 | `--harness` | `opencode` / `claude` / `codex` / `cursor` / `dsh` / `omp` / `gemini` / `all`, or a comma list — default: every detected harness (all seven on a fresh machine) |
 | `--home DIR` | Install into a different home directory (testing, containers). Also wins over `$DSH_HOME`, so a sandboxed run cannot reach a real harness home |
 | `--force` | Overwrite existing graphyloop files (previous copies backed up as `*.bak-<timestamp>`) |
-| `--check` | `update` only: report version/file drift and exit without writing |
+| `--check` | `update` only: report version/file drift and exit without writing. `install` has no dry-run — `install --check` / `--dry-run` exit 1; preview with `graphyloop doctor` |
 | `--skip-agents` / `--skip-workflow` | Skip agents/prompts or the rules file |
 | `--no-config-merge` | Never touch `opencode.json`, `.claude.json`, `config.toml`, `mcp.json`, `settings.json`, `cordis.patch.yml` |
+
+With no command, bare install flags (`--home`, `--harness`, `--force`, …) still install, but any other flag (`--check`, `--dry-run`, `--json`, a typo like `--doctor`) exits 1 with `unknown option … (no command given)` and writes nothing; name the command (`graphyloop doctor`, `graphyloop update --check`). Next to an explicit command, unknown flags are ignored.
 
 **Safety guarantees** (all covered by tests):
 
@@ -237,7 +239,7 @@ npx graphyloop mcp                  # run the MCP server directly (stdio)
 - Every write is preceded by a timestamped backup.
 - Re-running is always safe (idempotent).
 - Uninstall removes **only** files byte-identical to the shipped copies — anything you edited is left alone.
-- An existing Oh My Pi `AGENTS.md` or Gemini CLI `GEMINI.md` is kept, even with `--force`.
+- An existing Oh My Pi `AGENTS.md` or Gemini CLI `GEMINI.md` is kept, even with `--force`; the workflow then loads from the bundled `graphyloop-workflow` skill.
 
 ## Updates
 
@@ -287,15 +289,6 @@ It got useful enough that keeping it private stopped making sense. This reposito
 | Setup prompt (any AI) | [docs/SETUP-PROMPT.md](docs/SETUP-PROMPT.md) |
 | Install | `npx graphyloop` |
 
-## Credits
-
-Built with [**DeepSeek**](https://www.deepseek.com) and [**Claude**](https://www.anthropic.com/claude) (Anthropic) — AI-assisted engineering across design, implementation, and verification. Commits carry the standard co-author trailers:
-
-```
-Co-authored-by: Claude <noreply@anthropic.com>
-Co-authored-by: DeepSeek <noreply@deepseek.com>
-```
-
 ## License
 
-MIT © 2026 chadixearth
+MIT © 2026 Richard Legaspi ([@chadixearth](https://github.com/chadixearth))

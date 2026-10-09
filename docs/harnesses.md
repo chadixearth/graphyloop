@@ -10,7 +10,7 @@ GraphyLoop wires **7 harnesses**. `npx graphyloop` detects the ones you have and
 | **Cursor / Windsurf** | `cursor` | `~/.cursor/` | `~/.cursor/mcp.json` → `mcpServers.graphyloop` | — | — | — | `~/.cursor/rules/AGENTS.md` |
 | **DeepSeek Harness** | `dsh` | `~/.dsh/` or `$DSH_HOME` | `~/.dsh/cordis.patch.yml` row `id: graphyloop-mcp` | 26 role prompts + `graphyloop-squad` skill | — (dsh commands are plugins) | `~/.dsh/skills/` | `~/.dsh/AGENTS.md` |
 | **Oh My Pi** | `omp` | `~/.omp/` | `~/.omp/agent/mcp.json` → `mcpServers.graphyloop` (other keys, incl. `disabledServers`, kept) | `~/.omp/agent/agents/` — 26 squad files (`name` + `description` only, so they inherit your model) | — (omp has no file commands) | `~/.omp/agent/skills/` | `~/.omp/agent/AGENTS.md` **only when absent** |
-| **Gemini CLI** | `gemini` | `~/.gemini/` | `~/.gemini/settings.json` → `mcpServers.graphyloop` | — | `~/.gemini/commands/<name>.toml` (`/chadi-init` …) | — | `~/.gemini/GEMINI.md` **only when absent** |
+| **Gemini CLI** | `gemini` | `~/.gemini/` | `~/.gemini/settings.json` → `mcpServers.graphyloop` | — | `~/.gemini/commands/<name>.toml` (`/chadi-init` …) | `~/.gemini/skills/` | `~/.gemini/GEMINI.md` **only when absent** |
 
 Oh My Pi and Gemini CLI never lose a rules file you already wrote: if `~/.omp/agent/AGENTS.md` or `~/.gemini/GEMINI.md` exists and differs, GraphyLoop keeps it — even with `--force` — and the workflow loads on demand from the bundled `graphyloop-workflow` skill instead.
 

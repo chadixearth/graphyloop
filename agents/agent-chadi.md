@@ -102,8 +102,9 @@ Rules for the wave:
 - **Disjoint ownership.** Assign the file table before dispatch and put each lane's file list in its brief. Two edit-capable agents never share a file in a wave. Read-only agents are safe alongside anything.
 - **Concurrency.** At most 4 concurrent lanes by default; raise it only when the machine clearly has headroom, lower it after a stall.
 - **Dispatch by dependency.** Pass `plan.tasks` to `task_distribute`; dispatch only `dispatchNow`; `blocked` names what it waits on. After each result call `task_record`; its response names what it unblocked. After a restart `swarm_state` reports `readyTasks`, `blockedTasks` and per-wave counts. Use `agent_spawn` only to top up the roster.
-- **Turn-economy footer.** EVERY lane brief ends with this text, verbatim:
+- **Turn-economy footer.** EVERY BUILDER lane brief (wave-1 data, backend, frontend, test-writing) ends with this text, verbatim:
   `Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; first edit by turn 5; do not run project-wide lint/test/build — the driver does.`
+  The wave-0 lane that writes the ctx pack and contract ends with: `Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; write the ctx pack and contract before anything else.` Integration, verify and deploy lanes (they do run tests and builds) end with: `Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file.`
   A lane that needs 40+ turns was mis-sized: split it. The driver runs lint, typecheck, test and build once, after the lanes land.
 - **Required brief fields:** the contract and ctx pack paths, the lane's exclusive file list, the acceptance check, the return format `Changed / Files / Verified / Blocked`, and the footer.
 - **No fan-out** when A's output shapes B's input, for single-file changes, or under 4 files.

@@ -29,9 +29,8 @@ npm test                                   # the full suite: no network, no deps
 node bin/graphyloop.mjs install --home /tmp/sandbox --harness all --force
 ```
 
-`core.hooksPath hooks` turns on two hooks: `prepare-commit-msg` adds the AI
-co-author trailers, and `pre-push` runs the suite and refuses to push if it
-fails. The second exists because a commit with a failing test once reached
+`core.hooksPath hooks` turns on the `pre-push` hook: it runs the suite and
+refuses to push if it fails. It exists because a commit with a failing test once reached
 `main` — the suite had been piped into another command, so the shell reported
 *that* command's exit code and a `&&` gate passed vacuously. Never pipe the
 runner when you are gating on it; the hook runs it unpiped for exactly this
@@ -95,10 +94,19 @@ Maintainers only:
 
 ```bash
 npm test
-npm version patch          # creates the v* tag
-git push && git push --tags
+npm version minor          # or patch — commits and creates the v* tag
+git push --follow-tags
 ```
 
-The publish workflow re-runs the tests, rejects a tag that disagrees with
-`package.json`, and publishes only if an `NPM_TOKEN` secret exists — otherwise
-it stops at `PUBLISH_SKIPPED` and the release is published by hand.
+The publish workflow (`publish.yml`) re-runs the tests, rejects a tag that
+disagrees with `package.json`, and publishes through npm trusted publishing
+(OIDC, with provenance). One-time setup on npmjs.com: the package's
+*Settings* → *Trusted publishing* → *GitHub Actions*, repository
+`chadixearth/graphyloop`, workflow `publish.yml`. An `NPM_TOKEN` secret is an
+optional fallback. *Run workflow* (`workflow_dispatch`) takes an `otp` input
+and `dry_run=true` to validate the pipeline without shipping.
+
+When writing release smoke tests: a bare unknown flag with no command
+(`graphyloop --doctor`) exits 1 and writes nothing, and `install` has no
+dry-run (`install --check` / `--dry-run` exit 1) — preview with
+`graphyloop doctor`.
