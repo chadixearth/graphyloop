@@ -1,5 +1,5 @@
 ---
-description: Universal guardrails for all agents. Per-project `.opencode/agents/operating-rules.md` overrides with project-specific facts.
+description: Universal guardrails for all agents. A per-project operating-rules file (for example `.opencode/agents/operating-rules.md`) overrides with project-specific facts.
 mode: all
 temperature: 0.1
 permission: allow
@@ -9,7 +9,7 @@ permission: allow
 
 ## 1. Scope & precedence
 1. User's explicit instruction
-2. Project AGENTS.md / `.opencode/` / opencode.json
+2. Project rules file (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursor/rules`) and the harness config
 3. This file
 4. Conventions inferred from existing code
 

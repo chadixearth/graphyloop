@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GraphyLoop — one-command agentic workflow kit for AI coding agents</title>
+<meta name="description" content="One npx command wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies, MIT.">
+<link rel="canonical" href="https://chadixearth.github.io/graphyloop/">
+<meta name="color-scheme" content="light dark">
+<meta name="author" content="Richard Legaspi">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="GraphyLoop">
+<meta property="og:title" content="GraphyLoop — one-command agentic workflow kit for AI coding agents">
+<meta property="og:description" content="One npx command wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies, MIT.">
+<meta property="og:url" content="https://chadixearth.github.io/graphyloop/">
+<meta property="og:image" content="https://raw.githubusercontent.com/chadixearth/graphyloop/main/assets/social-preview.png">
+<meta property="og:image:alt" content="GraphyLoop social preview">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="GraphyLoop — one-command agentic workflow kit for AI coding agents">
+<meta name="twitter:description" content="One npx command wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies, MIT.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/chadixearth/graphyloop/main/assets/social-preview.png">
+<link rel="alternate" type="text/plain" href="https://chadixearth.github.io/graphyloop/llms.txt" title="llms.txt">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "GraphyLoop",
+  "description": "GraphyLoop is a one-command agentic workflow kit for AI coding agents: it wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies.",
+  "url": "https://chadixearth.github.io/graphyloop/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Windows, macOS, Linux",
+  "softwareVersion": "0.5.0",
+  "license": "https://opensource.org/licenses/MIT",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "downloadUrl": "https://www.npmjs.com/package/graphyloop",
+  "codeRepository": "https://github.com/chadixearth/graphyloop",
+  "author": {
+    "@type": "Person",
+    "name": "Richard Legaspi",
+    "url": "https://github.com/chadixearth"
+  },
+  "image": "https://raw.githubusercontent.com/chadixearth/graphyloop/main/assets/social-preview.png"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is GraphyLoop?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "GraphyLoop is a one-command agentic workflow kit for AI coding agents. It installs a 25-agent squad, parallel wave planning, persistent memory and an MCP server into the harnesses you already use. It is open source (MIT) with zero runtime dependencies."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does GraphyLoop work with Claude Code, Cursor and Gemini CLI?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. For Claude Code it registers an MCP server in ~/.claude.json, installs 26 agent files and 15 /chadi-* slash commands, and adds the workflow rules. For Cursor and Windsurf it adds the MCP server to ~/.cursor/mcp.json and the rules to ~/.cursor/rules/. For Gemini CLI (since 0.5.0) it adds the MCP server to ~/.gemini/settings.json and installs the commands as TOML files in ~/.gemini/commands/; an existing GEMINI.md is never overwritten."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which other harnesses are supported?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Seven in total: OpenCode, Claude Code, Codex, Cursor, DeepSeek Harness (dsh), Oh My Pi (omp) and Gemini CLI. Anything else that speaks MCP can use the same server via npx graphyloop mcp. See docs/harnesses.md for what is written where."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is GraphyLoop free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. It is MIT licensed and free to use, fork and modify. It uses the model your harness already has; GraphyLoop itself adds no subscription or usage fee."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does GraphyLoop need API keys?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The swarm, memory and MCP tools run locally with no API keys. The only optional key is DEEPSEEK_API_KEY, for letting the engine call DeepSeek directly, and nothing requires it."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is it different from a plain AGENTS.md or CLAUDE.md?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A rules file is static text that one tool reads. GraphyLoop adds a live engine behind an MCP server (persistent memory, a wave planner that writes the contract and context pack, task and file-ownership tracking) and a 25-agent squad, and installs the same workflow into seven harnesses instead of one."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I uninstall GraphyLoop?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Run npx graphyloop uninstall. It removes the core in ~/.graphyloop/, the MCP entries it added, and agents, commands, skills and rules files that are still byte-identical to what it shipped. Anything you edited, and all backups, stay."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does GraphyLoop send my data anywhere, and does it work on Windows?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "It sends nothing anywhere: state and memory are plain files in \u003cproject>/.graphyloop/, the MCP server runs locally over stdio, and stored credentials are chmod 600 and never returned to the model. It works on Windows, macOS and Linux; CI runs all three on Node 20, 22 and 24, and on Windows a server-guard keeps npm run dev from hanging an agent session."
+      }
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Install GraphyLoop for your AI coding agent",
+  "description": "Wire every detected AI coding harness with the GraphyLoop workflow in one command.",
+  "tool": [
+    {
+      "@type": "HowToTool",
+      "name": "Node.js 20 or newer"
+    }
+  ],
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Run the installer",
+      "text": "Run npx graphyloop in a terminal. A bare command installs and wires every harness it detects, or all seven on a fresh machine.",
+      "url": "https://chadixearth.github.io/graphyloop/#quick-start"
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "Restart your harness",
+      "text": "Close and reopen your terminal or editor, then open a real project (not your home directory).",
+      "url": "https://chadixearth.github.io/graphyloop/#quick-start"
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Start the workflow",
+      "text": "Ask your agent to run /chadi-init. In Codex use /prompts:chadi-init; in Oh My Pi and Cursor ask it to run the graphyloop workflow init.",
+      "url": "https://chadixearth.github.io/graphyloop/#quick-start"
+    }
+  ]
+}
+</script>
+<style>
+:root{--bg:#fff;--fg:#14162a;--muted:#555a72;--card:#f5f6fb;--line:#dfe2ee;--accent:#4f46e5;--accent-fg:#fff;--code:#eceefa;--ring:#4f46e5}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1020;--fg:#eceefb;--muted:#a3a8c6;--card:#171a31;--line:#2a2e4d;--accent:#8b8ff8;--accent-fg:#0e1020;--code:#1f2342;--ring:#8b8ff8}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--ring);outline-offset:2px;border-radius:4px}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-size:.92em}
+code{background:var(--code);padding:.1em .35em;border-radius:4px}
+.skip{position:absolute;left:-999px;top:0;background:var(--accent);color:var(--accent-fg);padding:.5rem 1rem;z-index:10}
+.skip:focus{left:0}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+header.top{border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding-top:14px;padding-bottom:14px}
+.brand{font-weight:700;font-size:1.15rem;color:var(--fg);text-decoration:none}
+nav ul{display:flex;flex-wrap:wrap;gap:6px 18px;list-style:none;margin:0;padding:0}
+nav a{text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--accent)}
+.hero{padding:56px 0 40px}
+h1{font-size:clamp(2rem,6vw,3.2rem);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
+.lead{font-size:1.15rem;color:var(--muted);max-width:760px;margin:0 0 28px}
+.cmd{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.cmd pre{margin:0;flex:1 1 260px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;font-size:1.1rem;overflow-x:auto}
+button.copy{font:inherit;font-weight:600;background:var(--accent);color:var(--accent-fg);border:0;border-radius:10px;padding:14px 22px;cursor:pointer;min-height:48px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.btn{display:inline-block;padding:10px 18px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--fg);font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.facts{margin:22px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px}
+.facts li{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 14px;font-size:.9rem;color:var(--muted)}
+section{padding:40px 0;border-top:1px solid var(--line)}
+h2{font-size:clamp(1.5rem,4vw,2rem);margin:0 0 20px;letter-spacing:-.01em}
+h3{font-size:1.08rem;margin:0 0 6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px;margin:0;padding:0;list-style:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card p{margin:0;color:var(--muted);font-size:.96rem}
+.card .tag{font-size:.8rem;color:var(--accent);font-weight:600}
+ol.steps{counter-reset:s;padding:0;margin:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+ol.steps li{counter-increment:s;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px 16px 58px;position:relative}
+ol.steps li::before{content:counter(s);position:absolute;left:16px;top:14px;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-fg);font-weight:700;display:grid;place-items:center}
+ol.steps p{margin:0;color:var(--muted);font-size:.96rem}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:480px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--card)}
+.faq h3{margin-top:22px}
+.faq p{margin:0;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:32px 0 48px;color:var(--muted);font-size:.95rem}
+footer ul{list-style:none;padding:0;margin:0 0 14px;display:flex;flex-wrap:wrap;gap:8px 22px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="wrap">
+<a class="brand" href="https://chadixearth.github.io/graphyloop/">GraphyLoop</a>
+<nav aria-label="Primary"><ul>
+<li><a href="#quick-start">Quick start</a></li>
+<li><a href="#harnesses">Harnesses</a></li>
+<li><a href="#workflow">Workflow</a></li>
+<li><a href="#features">Features</a></li>
+<li><a href="#faq">FAQ</a></li>
+<li><a href="https://github.com/chadixearth/graphyloop">GitHub</a></li>
+</ul></nav>
+</div>
+</header>
+<main id="main">
+<div class="wrap">
+<div class="hero">
+<h1>The one-command agentic workflow kit for AI coding agents</h1>
+<p class="lead">GraphyLoop is a one-command agentic workflow kit for AI coding agents: it wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies.</p>
+<div class="cmd" id="quick-start-cmd">
+<pre><code id="cmd-text">npx graphyloop</code></pre>
+<button class="copy" id="copy-btn" type="button" hidden aria-label="Copy the install command">Copy</button>
+</div>
+<div class="btns">
+<a class="btn" href="https://github.com/chadixearth/graphyloop#readme">Read the README</a>
+<a class="btn" href="https://www.npmjs.com/package/graphyloop">npm package</a>
+<a class="btn" href="https://github.com/chadixearth/graphyloop">Star on GitHub</a>
+</div>
+<ul class="facts" aria-label="Key facts">
+<li>7 harnesses</li><li>25-agent squad</li><li>15 MCP tools</li><li>72 skills</li><li>Zero dependencies</li><li>Node ≥ 20</li><li>MIT</li>
+</ul>
+</div>
+
+<section id="quick-start" aria-labelledby="h-quick">
+<h2 id="h-quick">Quick start</h2>
+<ol class="steps">
+<li><h3>Run the installer</h3><p><code>npx graphyloop</code> — a bare command installs. It wires every harness it detects, or all seven on a fresh machine.</p></li>
+<li><h3>Restart your harness</h3><p>Close and reopen your terminal or editor, then open a real project, not your home directory.</p></li>
+<li><h3>Start the workflow</h3><p>Ask your agent to run <code>/chadi-init</code>. Codex: <code>/prompts:chadi-init</code>. Oh My Pi and Cursor: ask it to run the graphyloop workflow init.</p></li>
+</ol>
+<p>Target specific harnesses with <code>npx graphyloop --harness claude,omp</code>. Verify with <code>npx graphyloop doctor</code> — it ends with <code>GRAPH_LOOP_DOCTOR_OK</code> when everything is wired.</p>
+</section>
+
+<section id="harnesses" aria-labelledby="h-harness">
+<h2 id="h-harness">Supported harnesses</h2>
+<ul class="grid">
+<li class="card"><h3>OpenCode</h3><p class="tag"><code>--harness opencode</code></p><p>Plugin with <code>graphyloop_*</code> tools, 26 agents, 15 <code>/chadi-*</code> commands.</p></li>
+<li class="card"><h3>Claude Code</h3><p class="tag"><code>--harness claude</code></p><p>MCP server, 26 agents, 15 slash commands, workflow rules.</p></li>
+<li class="card"><h3>Codex</h3><p class="tag"><code>--harness codex</code></p><p>MCP server and 15 prompts (<code>/prompts:chadi-init</code>).</p></li>
+<li class="card"><h3>Cursor / Windsurf</h3><p class="tag"><code>--harness cursor</code></p><p>MCP server plus the workflow as an AGENTS.md rule.</p></li>
+<li class="card"><h3>DeepSeek Harness</h3><p class="tag"><code>--harness dsh</code></p><p>MCP server, 26 role prompts and the <code>graphyloop-squad</code> skill.</p></li>
+<li class="card"><h3>Oh My Pi</h3><p class="tag"><code>--harness omp</code></p><p>MCP server in <code>~/.omp/agent/mcp.json</code>, 26 squad agents, skills. New in 0.5.0.</p></li>
+<li class="card"><h3>Gemini CLI</h3><p class="tag"><code>--harness gemini</code></p><p>MCP server in <code>~/.gemini/settings.json</code> and <code>/chadi-*</code> TOML commands. New in 0.5.0.</p></li>
+</ul>
+<p>Per-harness file locations and verification: <a href="https://github.com/chadixearth/graphyloop/blob/main/docs/harnesses.md">harness guide</a>.</p>
+</section>
+
+<section id="workflow" aria-labelledby="h-workflow">
+<h2 id="h-workflow">How the workflow works</h2>
+<p>Workflow v2 is harness-neutral: the same rules run in every harness above.</p>
+<ol class="steps">
+<li><h3>Recall</h3><p>Search memory first (<code>memory_search</code>); record the outcome last.</p></li>
+<li><h3>Size</h3><p>At most 3 known files is an inline edit. 4+ files or unmapped code is a build.</p></li>
+<li><h3>Context pack + contract</h3><p>One batched read pass writes <code>ctx-&lt;slug&gt;.md</code>; the frozen <code>contract-&lt;slug&gt;.md</code> is the only cross-lane dependency.</p></li>
+<li><h3>One wave</h3><p>All independent lanes dispatch in one parallel call, one lane per layer, strictly disjoint files.</p></li>
+<li><h3>Verify</h3><p>Run the changed path. Tests alone are not proof; UI is checked in a real browser.</p></li>
+<li><h3>Report</h3><p>Changed / Files / Verified (verbatim output) / Skills / Blocked.</p></li>
+</ol>
+</section>
+
+<section id="features" aria-labelledby="h-features">
+<h2 id="h-features">Features</h2>
+<ul class="grid">
+<li class="card"><h3>Swarm orchestration</h3><p>Spawn, distribute and track agents. State lives in <code>.graphyloop/state.json</code>; no API keys.</p></li>
+<li class="card"><h3>Persistent memory</h3><p>Decisions, patterns and lessons survive restarts and context compaction.</p></li>
+<li class="card"><h3>25-agent squad</h3><p>Explorer, backend, frontend, test, security, reviewer, architect, data, devops and more.</p></li>
+<li class="card"><h3>Wave planner</h3><p><code>plan_feature</code> turns a request into contract, parallel builders, integration and parallel verifiers.</p></li>
+<li class="card"><h3>Universal MCP bridge</h3><p>15 tools that work in every MCP-capable harness.</p></li>
+<li class="card"><h3>15 slash commands</h3><p><code>/chadi-init</code>, <code>/chadi-plan</code>, <code>/chadi-review</code>, <code>/chadi-deploy</code> and more.</p></li>
+<li class="card"><h3>72 bundled skills</h3><p>Contract-first waves, API hardening, accessibility, Supabase, Vercel, secrets. Your own skills are never overwritten.</p></li>
+<li class="card"><h3>Config safety</h3><p>Timestamped backups, no overwritten keys, idempotent re-runs, uninstall removes only byte-identical files.</p></li>
+<li class="card"><h3>Zero dependencies</h3><p>Pure Node 20+, MIT licensed, identical on Windows, macOS and Linux.</p></li>
+</ul>
+</section>
+
+<section id="compare" aria-labelledby="h-compare">
+<h2 id="h-compare">Harness alone vs + GraphyLoop</h2>
+<div class="tablewrap">
+<table>
+<thead><tr><th scope="col">Capability</th><th scope="col">Harness alone</th><th scope="col">+ GraphyLoop</th></tr></thead>
+<tbody>
+<tr><th scope="row">Agent collaboration</th><td>Isolated sessions</td><td>Swarm with shared memory</td></tr>
+<tr><th scope="row">Orchestration</th><td>Manual</td><td>Context pack, frozen contract, one parallel wave</td></tr>
+<tr><th scope="row">Memory</th><td>Session-only</td><td>Persistent, searchable, survives restarts</td></tr>
+<tr><th scope="row">Multi-harness</th><td>One tool, one rules file</td><td>Same workflow in 7 harnesses</td></tr>
+<tr><th scope="row">Setup</th><td>Hand-written rules per tool</td><td><code>npx graphyloop</code></td></tr>
+<tr><th scope="row">Safety</th><td>—</td><td>Backup-first merges, content-matched uninstall</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="faq" class="faq" aria-labelledby="h-faq">
+<h2 id="h-faq">Frequently asked questions</h2>
+<h3>What is GraphyLoop?</h3>
+<p>GraphyLoop is a one-command agentic workflow kit for AI coding agents. It installs a 25-agent squad, parallel wave planning, persistent memory and an MCP server into the harnesses you already use. It is open source (MIT) with zero runtime dependencies.</p>
+<h3>Does GraphyLoop work with Claude Code, Cursor and Gemini CLI?</h3>
+<p>Yes. For Claude Code it registers an MCP server in <code>~/.claude.json</code>, installs 26 agent files and 15 <code>/chadi-*</code> slash commands, and adds the workflow rules. For Cursor and Windsurf it adds the MCP server to <code>~/.cursor/mcp.json</code> and the rules to <code>~/.cursor/rules/</code>. For Gemini CLI (since 0.5.0) it adds the MCP server to <code>~/.gemini/settings.json</code> and installs the commands as TOML files in <code>~/.gemini/commands/</code>; an existing <code>GEMINI.md</code> is never overwritten.</p>
+<h3>Which other harnesses are supported?</h3>
+<p>Seven in total: OpenCode, Claude Code, Codex, Cursor, DeepSeek Harness (<code>dsh</code>), Oh My Pi (<code>omp</code>) and Gemini CLI. Anything else that speaks MCP can use the same server via <code>npx graphyloop mcp</code>. See docs/harnesses.md for what is written where.</p>
+<h3>Is GraphyLoop free?</h3>
+<p>Yes. It is MIT licensed and free to use, fork and modify. It uses the model your harness already has; GraphyLoop itself adds no subscription or usage fee.</p>
+<h3>Does GraphyLoop need API keys?</h3>
+<p>No. The swarm, memory and MCP tools run locally with no API keys. The only optional key is <code>DEEPSEEK_API_KEY</code>, for letting the engine call DeepSeek directly, and nothing requires it.</p>
+<h3>How is it different from a plain AGENTS.md or CLAUDE.md?</h3>
+<p>A rules file is static text that one tool reads. GraphyLoop adds a live engine behind an MCP server (persistent memory, a wave planner that writes the contract and context pack, task and file-ownership tracking) and a 25-agent squad, and installs the same workflow into seven harnesses instead of one.</p>
+<h3>How do I uninstall GraphyLoop?</h3>
+<p>Run <code>npx graphyloop uninstall</code>. It removes the core in <code>~/.graphyloop/</code>, the MCP entries it added, and agents, commands, skills and rules files that are still byte-identical to what it shipped. Anything you edited, and all backups, stay.</p>
+<h3>Does GraphyLoop send my data anywhere, and does it work on Windows?</h3>
+<p>It sends nothing anywhere: state and memory are plain files in <code>&lt;project&gt;/.graphyloop/</code>, the MCP server runs locally over stdio, and stored credentials are chmod 600 and never returned to the model. It works on Windows, macOS and Linux; CI runs all three on Node 20, 22 and 24, and on Windows a server-guard keeps <code>npm run dev</code> from hanging an agent session.</p>
+</section>
+</div>
+</main>
+<footer>
+<div class="wrap">
+<ul>
+<li><a href="https://github.com/chadixearth/graphyloop">GitHub</a></li>
+<li><a href="https://www.npmjs.com/package/graphyloop">npm</a></li>
+<li><a href="https://github.com/chadixearth/graphyloop#readme">README</a></li>
+<li><a href="https://github.com/chadixearth/graphyloop/blob/main/CHANGELOG.md">Changelog</a></li>
+<li><a href="https://github.com/chadixearth/graphyloop/issues">Issues</a></li>
+<li><a href="llms.txt">llms.txt</a></li>
+</ul>
+<p>GraphyLoop 0.5.0 · MIT © 2026 Richard Legaspi (<a href="https://github.com/chadixearth">chadixearth</a>)</p>
+</div>
+</footer>
+<script>
+(function(){var b=document.getElementById('copy-btn'),t=document.getElementById('cmd-text');if(!b||!t||!navigator.clipboard)return;b.hidden=false;b.addEventListener('click',function(){navigator.clipboard.writeText(t.textContent).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1800)})})})();
+</script>
+</body>
+</html>

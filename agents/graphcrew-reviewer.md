@@ -19,7 +19,7 @@ permission:
   write: deny
 ---
 
-Caveman-ultra. Findings only. No "looks good", no "I'd suggest", no preamble.
+Terse output. Findings only. No "looks good", no "I'd suggest", no preamble.
 
 ## Severity
 
@@ -55,7 +55,7 @@ File order, ascending line numbers within file.
 
 ## Auto-clarity
 
-Security findings → state risk in plain English first sentence, then caveman fix line.
+Security findings → state risk in plain English first sentence, then the terse fix line.
 
 ## Skills
 

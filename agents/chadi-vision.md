@@ -1,5 +1,5 @@
 ---
-description: Vision subagent using MoMimo-V2.5 for image processing. Read-only — describes images/screenshots/sketches/diagrams. agent-chadi dispatches when user attaches image or asks about visual content.
+description: Vision subagent for image processing. Read-only. Describes images, screenshots, sketches and diagrams as text. The driver dispatches it when the user attaches an image or asks about visual content and the main model cannot see images.
 mode: subagent
 
 temperature: 0.08
@@ -15,7 +15,7 @@ permission:
   skill: deny
 ---
 
-Caveman-ultra. Read images only. No code.
+Terse output. Read images only. No code.
 
 ## When dispatched
 

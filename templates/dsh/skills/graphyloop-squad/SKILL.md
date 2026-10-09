@@ -78,14 +78,19 @@ run elsewhere. In dsh, read the one that matches the request ("audit this repo" 
 
 ## Multi-layer work
 
-Do not fan out before the contract is frozen. `mcp__graphyloop__plan_feature`
+Size first: 3 or fewer known files is an inline edit, no delegation. For 4+ files
+do a batched read pass and write `ctx-<slug>.md` (per lane `path:line`, code
+excerpt, pattern to copy) next to the contract. Do not fan out before the
+contract is frozen. `mcp__graphyloop__plan_feature`
 returns wave 0 (one agent freezes schema, API, props and test scenarios), then
 wave 1 builders in parallel, wave 2 integration, wave 3 verifiers in parallel,
 wave 4 gated deploy. Hand that `tasks` array straight to
 `mcp__graphyloop__task_distribute`, which answers `dispatchNow` for what may run
 and `blocked` with `waitingOn` for what may not. Respect it — a lane dispatched
 early is the drift you will spend the integration wave undoing. The
-`graphyloop-waves` skill has the full protocol.
+`graphyloop-waves` skill has the full protocol. End every `subagent` brief with:
+`Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; first edit by turn 5; do not run project-wide lint/test/build — the driver does.`
+Never poll a long-running job; start it in the background and end the turn.
 
 ## Which bundled skill for which task
 
@@ -95,7 +100,7 @@ skill load inside every worker:
 
 | Task | Skill |
 |---|---|
-| Layered feature, parallel lanes | `graphyloop-waves` |
+| Layered feature, parallel lanes | `graphyloop-waves` (full rules: `graphyloop-workflow`) |
 | Interface two lanes share | `api-contract-design` |
 | Endpoint, server action, webhook, upload | `api-hardening` |
 | Client code rendering user data, tokens, env vars, third-party scripts | `frontend-security` |

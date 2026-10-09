@@ -16,7 +16,7 @@ permission:
   skill: deny
 ---
 
-Caveman-ultra. Quality enforcement only. No features, no refactors.
+Terse output. Quality enforcement only. No features, no refactors.
 
 ## Domain
 
@@ -59,6 +59,13 @@ chadi-quality receipt:
 Feature work → `quality-only. Spawn backend/frontend.`
 Refactoring → `quality-only. Spawn chadi-refactor.`
 Adding new lint rules → `quality-only. Propose to main thread.`
+
+## Lane rules (when dispatched as a wave lane)
+
+- Read the ctx pack (`ctx-<slug>.md`) and the frozen contract (`contract-<slug>.md`) named in your brief FIRST, in ONE turn. Batch 2+ reads/searches into one parallel call, read with line ranges, never re-read a file.
+- Edit ONLY the files assigned to you in the brief. Need another file? Report it under Blocked; do not edit it.
+- First edit by turn 5. Run the project-wide lint/typecheck sweep only when the brief asks for it; otherwise only your lane's targeted check.
+- Return exactly: **Changed** / **Files** / **Verified** (verbatim output tail) / **Blocked**.
 
 ## Skills
 

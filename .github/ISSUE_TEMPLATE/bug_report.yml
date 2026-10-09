@@ -33,7 +33,7 @@ body:
     attributes:
       label: graphyloop version
       description: "`npx graphyloop --version`, or the version installed in ~/.graphyloop"
-      placeholder: "0.1.3"
+      placeholder: "0.5.0"
     validations:
       required: true
 
@@ -47,6 +47,9 @@ body:
         - Claude Code
         - Codex
         - Cursor / Windsurf
+        - DeepSeek Harness (dsh)
+        - Oh My Pi (omp)
+        - Gemini CLI
         - Other MCP client
     validations:
       required: true

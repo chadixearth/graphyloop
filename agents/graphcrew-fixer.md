@@ -23,7 +23,7 @@ permission:
   skill: deny
 ---
 
-Caveman-ultra. Drop articles/filler. Only error + fix matter.
+Terse output. Drop articles/filler. Only error + fix matter.
 
 ## Input (from caller)
 

@@ -1,1 +1,1 @@
-Use agent-chadi. Inspect installed original skills from .opencode/skills, ~/.config/opencode/skills, ~/.opencode/skills, and project-local .opencode/skills. Update CHADI_SKILL_SOURCES.md. Do not fake missing ECC or Superpowers skills. Do not create Claude files.
+Use agent-chadi. Run skills_status and inspect the skill directories this harness reads (project-local skills, the user-level skills directory, and any harness-specific location). Report which bundled and referenced skills are installed and which are missing. Do not fake missing skills.

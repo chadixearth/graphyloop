@@ -8,7 +8,7 @@
 //
 // Asserts: user keys preserved everywhere, graphyloop entries added exactly once,
 // agents dirs populated, 12 commands per harness, AGENTS.md installed, re-runs
-// idempotent, --skip-agents leaves agents untouched, doctor lists all 4 harnesses.
+// idempotent, --skip-agents leaves agents untouched, doctor lists all 7 harnesses.
 // No network, no npm deps. Run with: node --test test/
 
 import { test, before, after } from 'node:test'
@@ -344,7 +344,7 @@ test('a forced re-install over an unchanged tree writes nothing and leaves no ba
   // Anchored on the present column so the "claude root: ..." log line cannot match.
   const copiedRows = res.stdout
     .split(/\r?\n/)
-    .filter((line) => /^ {2}(core|opencode|claude|codex|cursor|dsh)\s+(?:-|yes|no)\s+\d+/.test(line))
+    .filter((line) => /^ {2}(core|opencode|claude|codex|cursor|dsh|omp|gemini)\s+(?:-|yes|no)\s+\d+/.test(line))
   assert.ok(copiedRows.length > 0, `expected a report table, got:\n${res.stdout}`)
   for (const row of copiedRows) {
     const copied = Number(row.trim().split(/\s+/)[2])
@@ -481,11 +481,13 @@ test('re-install after uninstall restores everything (round trip)', () => {
   assert.equal(countOccurrences(toml, '[mcp_servers.graphyloop]'), 1, 'codex section restored once')
 })
 
-test('doctor lists all four harnesses', () => {
+test('doctor lists all seven harnesses with wired status and an OK marker', () => {
   const res = runCli(['doctor', '--home', sandbox])
   assert.equal(res.status, 0, res.stdout + res.stderr)
   const out = res.stdout.toLowerCase()
-  for (const name of ['opencode', 'claude', 'codex', 'cursor']) {
+  for (const name of ['opencode', 'claude', 'codex', 'cursor', 'dsh', 'omp', 'gemini']) {
     assert.ok(out.includes(name), `doctor output missing ${name}: ${res.stdout}`)
   }
+  assert.match(res.stdout, /\bwired\b/, 'doctor has a wired column')
+  assert.match(res.stdout, /GRAPH_LOOP_DOCTOR_OK/, res.stdout)
 })

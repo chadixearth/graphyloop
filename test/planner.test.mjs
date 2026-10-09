@@ -69,6 +69,45 @@ test('an inventory system plans database, backend and frontend in ONE parallel w
   assert.match(builders.dispatch, /ONE tool-call block/)
 })
 
+const FOOTER = 'Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; first edit by turn 5; do not run project-wide lint/test/build — the driver does.'
+
+test('wave 0 freezes a context pack next to the contract, and every lane brief ends with the turn-economy footer', () => {
+  const plan = cli(['plan', '--goal', INVENTORY])
+  const contractDir = plan.contract.file.slice(0, plan.contract.file.lastIndexOf('/'))
+  assert.equal(plan.ctx.file, `${contractDir}/ctx-${plan.slug}.md`, 'ctx pack lives in the same directory as the contract')
+  assert.equal(plan.inlineThreshold, 3)
+  assert.equal(plan.turnEconomyFooter, FOOTER)
+
+  const w0 = plan.tasks.find((t) => t.id === 'w0-contract')
+  assert.ok(w0.owns.includes(plan.contract.file) && w0.owns.includes(plan.ctx.file), 'wave 0 owns both frozen files')
+  assert.match(w0.description, /path:line/)
+  assert.match(w0.description, /pattern to copy/)
+  assert.ok(w0.description.includes(plan.ctx.file))
+
+  for (const t of plan.tasks) {
+    assert.ok(t.description.endsWith(FOOTER), `${t.id} brief must end with the turn-economy footer`)
+  }
+  for (const t of plan.tasks.filter((x) => x.wave >= 1)) {
+    assert.ok(t.description.includes(plan.ctx.file), `${t.id} brief must name the ctx pack`)
+  }
+})
+
+test('no-fanout plans report the inline threshold', () => {
+  const plan = cli(['plan', '--goal', 'rename a prop'])
+  assert.equal(plan.shape, 'no-fanout')
+  assert.equal(plan.inlineThreshold, 3)
+})
+
+test('distribute prompts carry the footer exactly once, as the last line', () => {
+  seedSwarm()
+  const plan = cli(['plan', '--goal', INVENTORY])
+  const res = cli(['distribute', '--tasks', JSON.stringify(plan.tasks)])
+  for (const a of res.assignments) {
+    assert.ok(a.prompt.endsWith(FOOTER), `${a.taskId} prompt must end with the footer`)
+    assert.equal(a.prompt.split(FOOTER).length - 1, 1, `${a.taskId} footer must appear once`)
+  }
+})
+
 test('every builder depends on the contract, and nothing else depends on a sibling builder', () => {
   const plan = cli(['plan', '--goal', INVENTORY])
   const byId = new Map(plan.tasks.map((t) => [t.id, t]))

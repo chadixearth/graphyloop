@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use GraphyLoop, please cite it as below."
+title: "GraphyLoop"
+type: software
+abstract: "GraphyLoop is a one-command agentic workflow kit for AI coding agents: it wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies."
+authors:
+  - family-names: "Legaspi"
+    given-names: "Richard"
+    alias: "chadixearth"
+repository-code: "https://github.com/chadixearth/graphyloop"
+url: "https://chadixearth.github.io/graphyloop/"
+license: MIT
+version: 0.5.0
+date-released: "2026-10-09"
+keywords:
+  - ai-agents
+  - agentic-workflow
+  - mcp
+  - model-context-protocol
+  - claude-code
+  - gemini-cli
+  - oh-my-pi
+  - opencode
+  - codex
+  - cursor
+  - multi-agent
+  - agent-memory
+  - context-engineering

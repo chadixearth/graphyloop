@@ -1,10 +1,10 @@
 {
   "name": "graphyloop",
-  "version": "0.4.1",
-  "description": "Agentic workflow kit for any AI coding harness: graphyloop swarm + memory (plugin + MCP server), chadi squad agents, 5-gate workflow. Install via npx.",
+  "version": "0.5.0",
+  "description": "GraphyLoop is a one-command agentic workflow kit for AI coding agents: it wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies.",
   "type": "module",
   "author": "Richard Legaspi (https://github.com/chadixearth)",
-  "homepage": "https://github.com/chadixearth/graphyloop#readme",
+  "homepage": "https://chadixearth.github.io/graphyloop/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/chadixearth/graphyloop.git"
@@ -27,7 +27,23 @@
     "codex",
     "cursor",
     "developer-tools",
-    "cli"
+    "cli",
+    "gemini-cli",
+    "oh-my-pi",
+    "omp",
+    "agents-md",
+    "ai-coding-agent",
+    "coding-agent",
+    "subagents",
+    "context-engineering",
+    "agent-workflow",
+    "workflow",
+    "windsurf",
+    "deepseek",
+    "ai-memory",
+    "claude",
+    "llm",
+    "devtools"
   ],
   "bin": {
     "graphyloop": "bin/graphyloop.mjs"

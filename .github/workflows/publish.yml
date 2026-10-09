@@ -1,14 +1,16 @@
 name: Publish
 
-# Automatic npm releases:
-#   - workflow_dispatch with the `otp` input: publish with a one-time code
-#   - workflow_dispatch with `dry_run=true`: validate the pipeline, no ship
-#   - push a v* tag: run the test gate, then publish only if the NPM_TOKEN
-#     secret exists (token presence is checked in a step, since env/secrets
-#     contexts are not available in step-level `if` conditions)
-#   - npm publish is skipped when the version already exists on the registry
-#     (idempotent re-runs: a manual publish or a re-pushed tag must not fail
-#     the workflow with an E409 conflict)
+# npm releases, in order of preference:
+#   1. Trusted publishing (OIDC): push a v* tag. No long-lived token — npm mints
+#      a short-lived credential for this workflow run and attaches a provenance
+#      attestation. One-time setup on npmjs.com: package graphyloop -> Settings ->
+#      Trusted publishing -> GitHub Actions, repo chadixearth/graphyloop,
+#      workflow file publish.yml.
+#   2. NPM_TOKEN secret: used automatically when trusted publishing is not
+#      configured. An invalid token is reported, not fatal, so OIDC still runs.
+#   3. workflow_dispatch with the `otp` input: publish with a one-time code.
+#   - workflow_dispatch with `dry_run=true`: pack + test only, no publish.
+#   - A version already on the registry is skipped (idempotent re-runs).
 
 on:
   push:
@@ -23,15 +25,23 @@ on:
         required: false
         default: 'false'
 
+permissions:
+  contents: read
+  id-token: write # trusted publishing + provenance
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org/
+
+      # Trusted publishing needs npm >= 11.5.1.
+      - name: Update npm
+        run: npm install -g npm@latest && npm --version
 
       - name: Tag matches package.json version (gate)
         if: startsWith(github.ref, 'refs/tags/v')
@@ -47,59 +57,38 @@ jobs:
       - name: Test suite (gate)
         run: node scripts/run-tests.mjs
 
-      - name: Check NPM_TOKEN presence and validity
-        id: tokencheck
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "present=no" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "present=yes" >> "$GITHUB_OUTPUT"
-          # Presence is not permission. A read-only or wrongly scoped granular
-          # token authenticates for reads and then fails `npm publish` with a bare
-          # `E404 PUT .../graphyloop` — which reads like "the package is missing"
-          # and sent the v0.2.1 release down a dead end. Say what is actually
-          # wrong, here, before the publish step runs.
-          if ! WHO=$(npm whoami 2>&1); then
-            echo "::error::NPM_TOKEN is not usable: npm whoami failed ($WHO). Mint a granular token with read+write on the graphyloop package (or a classic Automation token) and update the NPM_TOKEN secret."
-            exit 1
-          fi
-          echo "authenticated as: $WHO"
-          if ! ACCESS=$(npm access list packages "$WHO" 2>&1); then
-            echo "::warning::could not read package permissions for $WHO ($ACCESS) — continuing, publish will be the real test"
-          else
-            echo "$ACCESS" | grep -q 'graphyloop' || echo "::warning::$WHO has no listed permission on graphyloop; publish will likely fail with E404"
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish to npm (token)
-        if: ${{ github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) && steps.tokencheck.outputs.present == 'yes' }}
+      - name: Already published?
+        id: exists
         run: |
           PKG=$(node -p "require('./package.json').version")
           if npm view "graphyloop@$PKG" version >/dev/null 2>&1; then
             echo "VERSION_EXISTS: graphyloop@$PKG is already on the registry, skipping publish"
-            exit 0
+            echo "yes=true" >> "$GITHUB_OUTPUT"
           fi
-          npm publish
+
+      # Diagnostic only: OIDC does not need the token, so a stale token must not
+      # block the release. A broken token reads as `E404 PUT .../graphyloop`
+      # later, which looks like "package missing" — say what is wrong up front.
+      - name: NPM_TOKEN diagnostic
+        if: ${{ steps.exists.outputs.yes != 'true' }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then echo "no NPM_TOKEN secret: relying on trusted publishing"; exit 0; fi
+          if WHO=$(npm whoami 2>&1); then echo "NPM_TOKEN authenticates as: $WHO"
+          else echo "::warning::NPM_TOKEN is not usable ($WHO). Trusted publishing will be tried; if it is not configured, mint a granular token with read+write on graphyloop and update the secret."; fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm (trusted publishing or token)
+        if: ${{ steps.exists.outputs.yes != 'true' && github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) }}
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm (OTP)
-        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.otp != '' && github.event.inputs.otp != null }}
-        run: |
-          PKG=$(node -p "require('./package.json').version")
-          if npm view "graphyloop@$PKG" version >/dev/null 2>&1; then
-            echo "VERSION_EXISTS: graphyloop@$PKG is already on the registry, skipping publish"
-            exit 0
-          fi
-          npm publish --otp "${{ github.event.inputs.otp }}"
+        if: ${{ steps.exists.outputs.yes != 'true' && github.event.inputs.dry_run != 'true' && github.event.inputs.otp != '' && github.event.inputs.otp != null }}
+        run: npm publish --provenance --access public --otp "${{ github.event.inputs.otp }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish skipped (no token, no otp)
-        if: ${{ github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) && steps.tokencheck.outputs.present == 'no' }}
-        run: 'echo "PUBLISH_SKIPPED: add the NPM_TOKEN secret or run with the otp input to publish"'
 
       - name: Dry run (pack + verify, no publish)
         if: ${{ github.event.inputs.dry_run == 'true' }}

@@ -193,3 +193,10 @@ test('help documents the update command', () => {
   assert.match(res.out, /graphyloop update \[--check\]/)
   assert.match(res.out, /--check\s+update only: report drift, write nothing/)
 })
+
+test('help lists all seven harnesses', () => {
+  const res = cli('--help')
+  for (const name of ['opencode', 'claude', 'codex', 'cursor', 'dsh', 'omp', 'gemini']) {
+    assert.ok(res.out.includes(name), `help missing ${name}`)
+  }
+})

@@ -4,7 +4,8 @@
 // Zero-dependency ESM (Node >= 20). Delegates to lib/cli.mjs run().
 //
 // Usage:
-//   graphyloop install [--harness opencode|claude|codex|cursor|all] [flags]
+//   graphyloop                      (no command = install detected harnesses)
+//   graphyloop install [--harness opencode|claude|codex|cursor|dsh|omp|gemini|all] [flags]
 //   graphyloop doctor | status [--json] | uninstall [--harness ...] | mcp
 //   graphyloop --version | --help
 

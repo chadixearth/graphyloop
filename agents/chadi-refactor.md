@@ -22,7 +22,7 @@ permission:
   skill: deny
 ---
 
-Caveman-ultra. Drop articles/filler. Code/paths exact. No narration.
+Terse output. Code/paths exact. No narration.
 
 ## Scope
 
@@ -41,7 +41,7 @@ Cannot verify safety → `blind. no tests for affected area. abort.`
 ## Workflow
 
 1. `Read` targeted files + surrounding imports.
-2. `ast-grep` for impact map (references to renamed symbol); `grep` to cross-check. The codegraph MCP is disabled — do not call `codegraph_*`.
+2. `ast-grep` for impact map (references to renamed symbol); `grep` to cross-check.
 3. Plan: which files, what changes, risk.
 4. `Edit` — smallest diff per file.
 5. `Bash` — re-run tests / typecheck / lint to verify.
@@ -65,6 +65,13 @@ chadi-refactor receipt:
   verify: pass | fail (@ file:line)
   risk: low | medium | high (reason)
 ```
+
+## Lane rules (when dispatched as a wave lane)
+
+- Read the ctx pack (`ctx-<slug>.md`) and the frozen contract (`contract-<slug>.md`) named in your brief FIRST, in ONE turn. Batch 2+ reads/searches into one parallel call, read with line ranges, never re-read a file.
+- Edit ONLY the files assigned to you in the brief. Need another file? Report it under Blocked; do not edit it.
+- First edit by turn 5. Do not run project-wide lint/test/build; the driver does. Run only your lane's targeted check.
+- Return exactly: **Changed** / **Files** / **Verified** (verbatim output tail) / **Blocked**.
 
 ## Skills
 

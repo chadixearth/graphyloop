@@ -25,7 +25,7 @@ fails — several tests here were caught being vacuous that way.
 git clone https://github.com/chadixearth/graphyloop.git
 cd graphyloop
 git config core.hooksPath hooks            # enables the repo's git hooks
-npm test                                   # 50 tests, no network, no deps
+npm test                                   # the full suite: no network, no deps
 node bin/graphyloop.mjs install --home /tmp/sandbox --harness all --force
 ```
 
@@ -47,9 +47,9 @@ real home directory mid-change is how you end up debugging your own editor.
 | `lib/engine.mjs` | Swarm + memory rules. The single source of truth; both entry points call it. |
 | `adapter/cli.mjs` | Thin CLI wrapper — argv in, one JSON object out. |
 | `lib/mcp.mjs` | MCP stdio server. Calls the engine in-process; spawns the CLI only when `GRAPHYLOOP_CLI` pins a build. |
-| `lib/install-*.mjs` | One installer per harness. Each exports `install(ctx)` and returns a report. |
+| `lib/install-*.mjs` | One installer per harness (`opencode`, `claude`, `codex`, `cursor`, `dsh`, `omp`, `gemini`). Each exports `install(ctx)` and returns a report. |
 | `plugin/graphyloop/plugin.js` | OpenCode plugin (`graphyloop_*` tools). |
-| `agents/`, `workflow/`, `config/`, `templates/` | The squad, the rules, and per-harness files that get installed. |
+| `agents/`, `workflow/`, `config/`, `templates/` | The squad, the workflow v2 rules, and per-harness files that get installed. |
 | `assets/` | Logo and diagrams. Generated SVG, committed; not published to npm. |
 
 The installed tree mirrors the repo's relative shape on purpose:
@@ -66,14 +66,16 @@ juggling. If you move a file, keep that shape.
 ## Tests
 
 ```bash
-npm test                       # everything (50 tests)
+npm test                       # everything
 node --test test/adapter.test.mjs  # or one file
 ```
 
 - `test/adapter.test.mjs` — engine state: durability, migration, concurrency, validation.
 - `test/mcp.test.mjs` — the real MCP server over JSON-RPC, in-process and spawned.
 - `test/plugin.test.mjs` — the OpenCode plugin, against a stubbed `@opencode-ai/plugin`.
-- `test/install.test.mjs` — installers against a sandbox HOME with pre-seeded user config.
+- `test/install.test.mjs` — installers for every harness (OpenCode, Claude Code, Codex, Cursor, DeepSeek Harness, Oh My Pi, Gemini CLI) against a sandbox HOME with pre-seeded user config.
+
+Adding a harness: add its name to `HARNESS_NAMES` in `lib/cli.mjs`, write `lib/install-<name>.mjs`, teach `lib/detect.mjs` to find it, add uninstall coverage, then list it in `README.md`, `docs/harnesses.md`, `docs/SETUP-PROMPT.md`, `docs/index.html` and `llms.txt`.
 
 No test may touch the network or your real home directory.
 

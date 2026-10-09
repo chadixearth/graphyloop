@@ -4,6 +4,66 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.5.0] — 2026-10-09 — Workflow v2
+
+### Changed
+- **Workflow v2: the rules are now harness-neutral and follow how current
+  agent harnesses actually get fast.** `workflow/AGENTS.md` was the author's
+  personal OpenCode config (RAM caps, script paths, provider model routing,
+  "do not use Claude" rules — installed even into `~/.claude`). It is now 11
+  ordered rules that work in every harness: recall first / record last; size
+  the work (≤3 known files inline, 4+ is a build); write a **context pack**
+  (`ctx-<slug>.md`: per lane `path:line`, current code, pattern to copy) before
+  dispatch; freeze the contract; dispatch **one wave** with disjoint file
+  ownership; turn economy (first edit by turn 5); no polling; verify by
+  running; conditional audit wave; artifact wave; evidence-first report.
+- `agent-chadi` driver prompt cut from 36 KB to 20 KB and rewritten for
+  Workflow v2; builder agents gained lane rules (read ctx pack + contract in
+  one turn, edit only owned files, return Changed/Files/Verified/Blocked).
+- `/chadi-*` commands, Codex prompts and the dsh `graphyloop-squad` skill
+  aligned with Workflow v2; `/chadi-recall` uses graphyloop memory.
+- **Bare `npx graphyloop` now installs** (it used to print help; `--help` still
+  does). `--harness` accepts a comma list (`--harness claude,omp`).
+- `graphyloop doctor` adds a **wired** column (entry exists *and* points at an
+  existing server/plugin), a `fix:` command per unwired harness, and a final
+  `GRAPH_LOOP_DOCTOR_OK` / `GRAPH_LOOP_DOCTOR_ISSUES <n>` line. Exit code is
+  still 0.
+- Install "Next steps" are tailored to the harnesses actually installed.
+
+### Added
+- **Oh My Pi (`omp`) harness**: MCP server merged into `~/.omp/agent/mcp.json`
+  (other servers and `disabledServers` kept), 26 squad agents (model-neutral),
+  bundled skills, and `AGENTS.md` only when you have none.
+- **Gemini CLI (`gemini`) harness**: MCP server merged into
+  `~/.gemini/settings.json`, 15 `/chadi-*` TOML commands, and `GEMINI.md` only
+  when you have none.
+- An existing `AGENTS.md` / `GEMINI.md` in those harnesses is **never**
+  overwritten, not even by `--force` or `update` — the install warns instead.
+- **Context pack in the engine**: `plan_feature` Wave 0 now freezes
+  `ctx-<slug>.md` next to the contract; every lane brief and every
+  `task_distribute` prompt ends with the turn-economy footer; plans report
+  `inlineThreshold: 3`. Additive — existing fields are unchanged.
+- `skills_status` also scans `~/.omp/agent/skills` and `~/.gemini/skills`.
+- New bundled skill `graphyloop-workflow` (the condensed workflow, loaded on
+  demand by harnesses that keep their own rules file). 72 bundled skills.
+- **Discoverability**: README rewritten answer-first (Quick Start, harness
+  table, workflow diagram, FAQ, comparison); long reference moved to
+  `docs/reference.md` and `docs/harnesses.md`; GitHub Pages landing page
+  (`docs/index.html`, JSON-LD SoftwareApplication + FAQPage + HowTo, Open Graph,
+  sitemap, robots); `llms.txt`; `CITATION.cff`; npm description, homepage and
+  keywords updated.
+
+### Release pipeline
+- `publish.yml` publishes with **npm trusted publishing (OIDC) and
+  provenance**; `NPM_TOKEN` is a fallback and an invalid token is a warning
+  instead of a hard failure (it had blocked the v0.4.0/v0.4.1 tag publishes).
+
+### Tests
+- 211 total (was 187): new `harness-omp-gemini` suite (18 tests: wiring,
+  never-clobber with and without `--force`, idempotent re-install, uninstall,
+  doctor, comma lists, bare install, TOML round-trip) plus planner, MCP and
+  adapter coverage for the context pack, footer and new skills roots.
+
 ## [0.4.2] — 2026-08-17
 
 ### Fixed
@@ -591,7 +651,9 @@ Documented and tested, but never published on its own: it ships inside 0.4.0.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
-[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/chadixearth/graphyloop/compare/78ff513...v0.5.0
+[0.4.2]: https://github.com/chadixearth/graphyloop/compare/v0.4.1...78ff513
 [0.4.1]: https://github.com/chadixearth/graphyloop/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/chadixearth/graphyloop/compare/v0.2.1...v0.4.0
 [0.2.1]: https://github.com/chadixearth/graphyloop/compare/v0.2.0...v0.2.1

@@ -18,7 +18,7 @@ the same table. This skill is the third option.
 ## The pipeline
 
 ```
-Wave 0  contract      ONE agent, alone. Nothing else starts until it lands.
+Wave 0  context pack + contract   ONE agent, alone: ctx-<slug>.md, then contract-<slug>.md
 Wave 1  builders      data ∥ backend ∥ frontend ∥ tests   (ONE tool-call block)
 Wave 2  integration   drop mocks, real calls, env wiring, boot the happy path
 Wave 3  verify        test ∥ typecheck/lint ∥ security ∥ performance ∥ review
@@ -33,7 +33,11 @@ Wall clock = Wave 0 + slowest builder + integration + slowest verifier. Never th
    with the user's request verbatim as `goal`. It returns waves, tasks, per-lane
    `owns` globs, `acceptance` checks and `dependsOn`.
    - `shape: no-fanout` → stop. This is inline or single-builder work.
-2. **Freeze the contract (Wave 0).** One agent writes
+2. **Context pack, then freeze the contract (Wave 0).** One batched read pass
+   (parallel reads/greps) writes `.opencode/chadi/ctx-<slug>.md` next to the
+   contract: per lane, `path:line`, the current code excerpt, and the pattern
+   file to copy. Lanes start editing from it instead of rediscovering. Then one
+   agent writes
    `.opencode/chadi/contract-<slug>.md`:
    - entities: columns, types, nullability, foreign keys, indexes
    - every route: method, path, request shape, response JSON, error codes
@@ -46,7 +50,8 @@ Wall clock = Wave 0 + slowest builder + integration + slowest verifier. Never th
    `task_distribute`. Dispatch ONLY the ids in `dispatchNow`. `blocked` entries
    name what they are waiting on.
 4. **Fan out a whole wave in ONE tool-call block.** Every prompt carries: the
-   contract path, that lane's exclusive file list, its acceptance check.
+   contract and ctx pack paths, that lane's exclusive file list, its acceptance
+   check, and the turn-economy footer verbatim: `Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; first edit by turn 5; do not run project-wide lint/test/build — the driver does.`
 5. **Record every result.** `task_record` returns what the result unblocked —
    that is the trigger for the next wave. After a restart or compaction,
    `swarm_state` reports `readyTasks`, `blockedTasks` and per-wave counts.
@@ -64,8 +69,8 @@ Wall clock = Wave 0 + slowest builder + integration + slowest verifier. Never th
   fetch layer in ONE module so the integration swap is a single file.
 - Two edit-capable agents never own the same file in the same wave. Assign the
   ownership table before dispatch.
-- Local build/test agents cap at 4 concurrent (RAM-bound); read-only verifiers
-  up to 8; browser max 2.
+- At most 4 concurrent build/test lanes by default; read-only verifiers may
+  run wider; never poll a long-running job: background it.
 - A wave is not done because its agents returned. It is done when its acceptance
   check has been run and its output quoted.
 

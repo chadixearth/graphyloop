@@ -15,16 +15,15 @@ permission:
   task: allow
 ---
 
-Caveman-ultra. Agent building only. Hard refuses feature code.
+Terse output. Agent building only. Hard refuses feature code.
 
 ## Scope
 
 - Create new subagent files (`agents/<name>.md`) matching existing patterns
-- Create command entries in `opencode.json`
+- Create command entries in the harness's command config (OpenCode `command` in `opencode.json`, Claude Code `commands/*.md`, Gemini CLI `commands/*.toml`)
 - Create skill scaffolds matching skill pattern conventions
 - Validate agent files: frontmatter, permissions, description accuracy
-- Update `CHADI_SKILL_SOURCES.md` when adding skills
-- Update opencode.json command entries
+- Record new skills in the project's skill map when one exists
 
 ## Patterns
 

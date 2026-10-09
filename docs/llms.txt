@@ -1,0 +1,32 @@
+# GraphyLoop
+
+> GraphyLoop is a one-command agentic workflow kit for AI coding agents: it wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies.
+
+Facts: version 0.5.0 · 7 harnesses · 25-agent squad (26 agent files including the driver) · 15 slash commands · 15 MCP tools · 72 bundled skills · zero runtime dependencies · Node.js >= 20 · MIT license · free, no API keys required, runs locally. Install: `npx graphyloop`.
+
+## Start here
+
+- [README](https://raw.githubusercontent.com/chadixearth/graphyloop/main/README.md): positioning, quick start, supported harnesses, how the workflow works, FAQ
+- [Landing page](https://chadixearth.github.io/graphyloop/): overview, harness grid, FAQ
+- [npm package](https://www.npmjs.com/package/graphyloop): `npx graphyloop`
+- [Setup prompt](https://raw.githubusercontent.com/chadixearth/graphyloop/main/docs/SETUP-PROMPT.md): copy-paste prompt that lets any AI harness install and verify GraphyLoop itself
+
+## Docs
+
+- [Harness guide](https://raw.githubusercontent.com/chadixearth/graphyloop/main/docs/harnesses.md): per-harness detection, files written, next steps, verification (OpenCode, Claude Code, Codex, Cursor/Windsurf, DeepSeek Harness, Oh My Pi, Gemini CLI)
+- [Reference](https://raw.githubusercontent.com/chadixearth/graphyloop/main/docs/reference.md): MCP server internals and benchmarks, configuration, skills, troubleshooting, development, version history
+- [Workflow v2 rules](https://raw.githubusercontent.com/chadixearth/graphyloop/main/workflow/AGENTS.md): the harness-neutral workflow — recall, size the work, context pack, frozen contract, one wave, verify, report
+- [Changelog](https://raw.githubusercontent.com/chadixearth/graphyloop/main/CHANGELOG.md): release notes
+- [Contributing](https://raw.githubusercontent.com/chadixearth/graphyloop/main/CONTRIBUTING.md): ground rules, layout, tests, releasing
+
+## Source
+
+- [GitHub repository](https://github.com/chadixearth/graphyloop): source and issues
+- [MCP server and engine](https://github.com/chadixearth/graphyloop/blob/main/lib/mcp.mjs): the 15 MCP tools (plan_feature, task_distribute, memory_search, memory_store, ...)
+- [Squad agents](https://github.com/chadixearth/graphyloop/tree/main/agents): the agent prompts
+- [Bundled skills](https://github.com/chadixearth/graphyloop/tree/main/skills): 72 skills
+
+## Optional
+
+- [Citation file](https://raw.githubusercontent.com/chadixearth/graphyloop/main/CITATION.cff): how to cite GraphyLoop
+- [License](https://raw.githubusercontent.com/chadixearth/graphyloop/main/LICENSE): MIT

@@ -17,7 +17,7 @@ permission:
   write: deny
 ---
 
-Caveman-ultra. Deep reasoning only. No code output.
+Terse output. Deep reasoning only. No code output.
 
 ## When dispatched
 
@@ -33,7 +33,7 @@ agent-chadi sends you tasks needing:
 1. Read all context provided by dispatcher
 2. If more context needed: dispatch chadi-explorer
 3. Think systematically: first principles, decompose, evaluate options
-4. Return structured plan in caveman-ultra format
+4. Return the structured plan in the format below
 
 ## Output format
 

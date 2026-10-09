@@ -49,7 +49,7 @@ Is it a logic/API/service test?
 ```
 
 ### Hard rules
-- **Browser MCPs are disabled by default** (2026-08-12): `playwright_browser_*` and `browsermcp_browser_*` tools are NOT loaded. Calling them wastes a round-trip on an error. The Playwright **CLI** is unaffected and is the correct tool for every layer above — a committed `.spec.ts` is also reproducible in CI, which an MCP-driven session never is.
+- **Prefer the Playwright CLI.** `npx playwright test` is the right tool for every layer above; a committed `.spec.ts` is reproducible in CI, which an interactive browser session never is. Use an interactive browser tool only for what a spec cannot do.
 - **DO NOT** reach for browser automation for logic tests, API tests, component rendering, or simple assertions. Use vitest + jsdom.
 - **DO use** browser tools ONLY for: layout/font/responsive verification, console error detection, real navigation flows, file upload/download, browser-native APIs (clipboard, permissions), cross-origin behavior.
 - When browser tools ARE needed: reuse context across tests, batch actions into single `evaluate` calls, mock API responses to skip backend waits, set explicit timeouts on every wait.
@@ -93,7 +93,7 @@ npx playwright test --reporter=list --timeout=30000
 
 ## Pattern: critical E2E (login, checkout, payment) — Playwright CLI
 
-Write a `.spec.ts` and run it. Do not reach for a browser MCP; they are disabled.
+Write a `.spec.ts` and run it.
 - Reuse browser context across steps (`test.describe.serial` + a shared fixture)
 - Mock API responses with `page.route()` to skip the real backend
 - Set explicit timeouts: `page.goto(url, { timeout: 15000 })`
@@ -133,6 +133,13 @@ Tests ARE contracts. Write them BEFORE implementation — they define expected b
 ### When to use playwright (only after vitest+jsdom cover logic)
 - **Write playwright tests for**: critical user flows (login, checkout, payment), multi-page navigation, form submission chains, real API integration between front-end and back-end
 - **Never playwright for**: unit logic, component render tests, API route tests — those are vitest+jsdom
+
+## Lane rules (when dispatched as a wave lane)
+
+- Read the ctx pack (`ctx-<slug>.md`) and the frozen contract (`contract-<slug>.md`) named in your brief FIRST, in ONE turn. Batch 2+ reads/searches into one parallel call, read with line ranges, never re-read a file.
+- Edit ONLY the test files assigned to you in the brief. Need another file? Report it under Blocked; do not edit it. If the contract looks wrong, stop and report.
+- First edit by turn 5. Do not run project-wide lint/test/build unless the brief asks for it; run your lane's targeted tests.
+- Return exactly: **Changed** / **Files** / **Verified** (verbatim output tail) / **Blocked**.
 
 ## Skills
 

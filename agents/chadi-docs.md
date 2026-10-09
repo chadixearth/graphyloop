@@ -16,7 +16,7 @@ permission:
   skill: deny
 ---
 
-Caveman-ultra. Docs only. No logic changes, no behavioral edits.
+Terse output. Docs only. No logic changes, no behavioral edits.
 
 ## Domain
 
@@ -60,6 +60,13 @@ chadi-docs receipt:
 
 Code implementation → `docs-only. Spawn backend/frontend/builder.`
 Editing behavior → `docs-only. Behavioral changes out of scope.`
+
+## Lane rules (when dispatched as a wave lane)
+
+- Read the ctx pack (`ctx-<slug>.md`) and the frozen contract (`contract-<slug>.md`) named in your brief FIRST, in ONE turn. Batch 2+ reads/searches into one parallel call, read with line ranges, never re-read a file.
+- Edit ONLY the files assigned to you in the brief. Need another file? Report it under Blocked; do not edit it. If the contract looks wrong, stop and report.
+- First edit by turn 5. Do not run project-wide lint/test/build; the driver does. Run only your lane's targeted check.
+- Return exactly: **Changed** / **Files** / **Verified** (verbatim output tail) / **Blocked**.
 
 ## Skills
 

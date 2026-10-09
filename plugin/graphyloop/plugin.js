@@ -284,7 +284,7 @@ export default async (input) => {
       }),
 
       graphyloop_plan_feature: tool({
-        description: 'Plan a multi-layer feature as parallel waves BEFORE coding. Returns wave 0 contract (one agent freezes schema + API + props + test scenarios) -> wave 1 parallel builders (data ∥ backend ∥ frontend ∥ tests) -> wave 2 integration -> wave 3 parallel verifiers (test ∥ typecheck ∥ security ∥ performance ∥ review) -> wave 4 gated deploy. Each task carries its owned files, acceptance check and dependsOn. Feed plan.tasks to graphyloop_distribute.',
+        description: 'Plan a multi-layer feature as parallel waves BEFORE coding. Returns wave 0 (one agent freezes the contract: schema + API + props + test scenarios, AND the context pack ctx-<slug>.md next to it: per lane path:line + current code excerpt + pattern to copy) -> wave 1 parallel builders (data ∥ backend ∥ frontend ∥ tests) -> wave 2 integration -> wave 3 parallel verifiers (test ∥ typecheck ∥ security ∥ performance ∥ review) -> wave 4 gated deploy. Each task carries its owned files, acceptance check and dependsOn, and every lane brief ends with the turn-economy footer (batch reads, first edit by turn 5, no project-wide lint/test/build). A goal touching 3 known files or fewer answers shape no-fanout (inlineThreshold 3): do it inline. Feed plan.tasks to graphyloop_distribute.',
         args: {
           goal: tool.schema.string().describe('The feature request in plain words, e.g. "inventory system with stock levels and a dashboard"'),
           includeDeploy: tool.schema.string().optional().describe('"true" to force the deploy wave on'),
@@ -364,7 +364,7 @@ export default async (input) => {
       }),
 
       graphyloop_skills: tool({
-        description: 'Which skills are installed on this machine (project .opencode/skills, .dsh/skills, .agents/skills; ~/.config/opencode/skills, ~/.claude/skills, ~/.dsh/skills, ~/.agents/skills), which graphyloop-bundled skills are present (71, of which 11 are graphyloop-authored: graphyloop-waves, api-contract-design, api-hardening, frontend-security, web-accessibility, web-performance, dependency-audit, supabase-setup, vercel-deploy, secrets-hygiene, swarm-memory), and which skills the squad routes on but are missing. Check here instead of guessing — a missing skill is reported in one line, never faked.',
+        description: 'Which skills are installed on this machine (project .opencode/skills, .dsh/skills, .agents/skills; ~/.config/opencode/skills, ~/.claude/skills, ~/.dsh/skills, ~/.omp/agent/skills, ~/.gemini/skills, ~/.agents/skills), which graphyloop-bundled skills are present (72, of which 12 are graphyloop-authored: graphyloop-waves, graphyloop-workflow, api-contract-design, api-hardening, frontend-security, web-accessibility, web-performance, dependency-audit, supabase-setup, vercel-deploy, secrets-hygiene, swarm-memory), and which skills the squad routes on but are missing. Check here instead of guessing — a missing skill is reported in one line, never faked.',
         args: {},
         async execute() {
           return JSON.stringify(runCli(['skills'], projectDir), null, 2);

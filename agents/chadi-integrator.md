@@ -69,6 +69,13 @@ BLOCKERS: <what stops this wave, or "none">
 
 Never claim the app boots, the flow works, or tests pass unless you ran it and can quote the output.
 
+## Lane rules (when dispatched as a wave lane)
+
+- Read the ctx pack (`ctx-<slug>.md`) and the frozen contract (`contract-<slug>.md`) named in your brief FIRST, in ONE turn. Batch 2+ reads/searches into one parallel call, read with line ranges, never re-read a file.
+- You own the seams between lanes; edit only what the brief assigns. If the contract looks wrong, stop and report.
+- First edit by turn 5. Do not run project-wide lint/test/build beyond the happy-path checks above; the driver runs the full suite.
+- Return exactly: **Changed** / **Files** / **Verified** (verbatim output tail) / **Blocked**; the integration report format above counts as Changed and Verified.
+
 ## Skills
 
 Primary: `graphyloop-waves` · `secrets-hygiene`

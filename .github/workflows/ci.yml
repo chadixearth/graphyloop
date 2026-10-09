@@ -56,6 +56,20 @@ jobs:
           test -f "$SANDBOX/.config/opencode/skills/graphyloop-waves/SKILL.md"
           test -f "$SANDBOX/.claude/skills/secrets-hygiene/SKILL.md"
           test -f "$SANDBOX/.dsh/skills/swarm-memory/SKILL.md"
+          # Oh My Pi: MCP entry merged, squad agents + skills + rules written.
+          test -f "$SANDBOX/.omp/agent/mcp.json"
+          grep -q '"graphyloop"' "$SANDBOX/.omp/agent/mcp.json"
+          test -f "$SANDBOX/.omp/agent/agents/agent-chadi.md"
+          test -f "$SANDBOX/.omp/agent/skills/graphyloop-waves/SKILL.md"
+          test -f "$SANDBOX/.omp/agent/AGENTS.md"
+          # Gemini CLI: settings.json MCP entry + TOML slash commands + GEMINI.md.
+          test -f "$SANDBOX/.gemini/settings.json"
+          grep -q '"graphyloop"' "$SANDBOX/.gemini/settings.json"
+          test -f "$SANDBOX/.gemini/commands/chadi-init.toml"
+          test -f "$SANDBOX/.gemini/GEMINI.md"
+          # Every present harness must be wired and the core current.
+          node bin/graphyloop.mjs doctor --home "$SANDBOX" > /tmp/doctor.log 2>&1
+          grep -q GRAPH_LOOP_DOCTOR_OK /tmp/doctor.log
           echo "INSTALLER_SMOKE_OK"
       - name: Update refreshes an existing install
         shell: bash
@@ -96,6 +110,8 @@ jobs:
           grep -q 'package/skills/graphyloop-waves/SKILL.md' /tmp/graphyloop-files.txt
           grep -q 'package/skills/secrets-hygiene/SKILL.md' /tmp/graphyloop-files.txt
           grep -q 'package/agents/chadi-integrator.md' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/install-omp.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/install-gemini.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/mcp-server.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/plugin/graphyloop/plugin.js' /tmp/graphyloop-files.txt
           grep -q 'package/adapter/cli.mjs' /tmp/graphyloop-files.txt

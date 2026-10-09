@@ -1,7 +1,9 @@
 // CI smoke: verify the MCP server installed into a sandbox home actually
-// answers the protocol handshake. Usage:
+// answers the protocol handshake, and that the JSON-configured harnesses
+// (claude, cursor, omp, gemini) point at that same server. Usage:
 //   node scripts/ci-mcp-smoke.mjs --home <sandbox-home> --proj <project-dir>
 // Exit 0 on success, 1 on failure. Works on Node 20/22/24, all platforms.
+import { existsSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { TOOL_NAMES } from '../lib/mcp.mjs';
@@ -19,6 +21,24 @@ if (!home || !proj) {
 }
 
 const serverPath = path.join(home, '.graphyloop', 'mcp-server.mjs');
+
+// Harnesses that merge `mcpServers.graphyloop` into a JSON file must reference
+// the installed server; a wiring bug here is invisible to the handshake below.
+const jsonWired = [
+  ['claude', path.join(home, '.claude.json')],
+  ['cursor', path.join(home, '.cursor', 'mcp.json')],
+  ['omp', path.join(home, '.omp', 'agent', 'mcp.json')],
+  ['gemini', path.join(home, '.gemini', 'settings.json')],
+];
+for (const [name, file] of jsonWired) {
+  if (!existsSync(file)) continue; // harness not installed in this sandbox
+  const args = JSON.parse(readFileSync(file, 'utf8'))?.mcpServers?.graphyloop?.args;
+  if (!Array.isArray(args) || path.resolve(String(args[0])) !== path.resolve(serverPath)) {
+    console.error(`${name}: ${file} mcpServers.graphyloop does not point at ${serverPath}`);
+    process.exit(1);
+  }
+}
+
 const server = spawn(process.execPath, [serverPath], {
   env: { ...process.env, GRAPHYLOOP_PROJECT_ROOT: proj },
   stdio: ['pipe', 'pipe', 'pipe'],

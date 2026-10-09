@@ -270,6 +270,18 @@ test('tools/call plan_feature returns a wave plan whose tasks task_distribute ac
   assert.ok(res.blocked.length > 0, 'later waves reported as blocked')
 })
 
+test('plan_feature output carries the ctx pack path and the turn-economy footer on every lane', { timeout: 20000 }, async () => {
+  const planned = await callTool('plan_feature', { goal: 'inventory system with stock levels and a dashboard' })
+  const plan = JSON.parse(planned.content[0].text)
+  assert.match(plan.ctx.file, /ctx-[a-z0-9-]+\.md$/)
+  assert.equal(plan.ctx.file.replace('ctx-', 'contract-'), plan.contract.file)
+  for (const t of plan.tasks) {
+    assert.match(t.description, /Read the ctx pack and contract first, in ONE turn\./, `${t.id} missing footer`)
+  }
+  const tools = (await rpc('tools/list', {})).result.tools
+  assert.match(tools.find((t) => t.name === 'plan_feature').description, /ctx-<slug>\.md/)
+})
+
 test('tools/call plan_feature without a goal returns isError (validation)', { timeout: 15000 }, async () => {
   const result = await callTool('plan_feature', {})
   assert.equal(result.isError, true)

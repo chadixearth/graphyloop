@@ -315,6 +315,22 @@ test('record reports whether the task and agent were actually found', () => {
   assert.equal(miss.agentFound, false)
 })
 
+test('skills_status reports the omp and gemini skill roots', () => {
+  const home = mkdtempSync(join(tmpdir(), 'graphyloop-skills-home-'))
+  projects.push(home)
+  mkdirSync(join(home, '.omp', 'agent', 'skills', 'demo'), { recursive: true })
+  writeFileSync(join(home, '.omp', 'agent', 'skills', 'demo', 'SKILL.md'), '---\nname: demo\n---\n')
+  const res = cli(['skills'], { GRAPHYLOOP_HOME: home })
+  const omp = res.roots.find((r) => r.harness === 'omp')
+  const gemini = res.roots.find((r) => r.harness === 'gemini')
+  assert.ok(omp, 'omp root reported')
+  assert.ok(gemini, 'gemini root reported')
+  assert.equal(resolve(omp.dir), resolve(home, '.omp', 'agent', 'skills'))
+  assert.equal(resolve(gemini.dir), resolve(home, '.gemini', 'skills'))
+  assert.equal(omp.present, true)
+  assert.equal(gemini.present, false)
+})
+
 test('shutdown terminates agents and keeps memories', () => {
   cli(['init'])
   cli(['memory-store', '--content', 'survives shutdown', '--type', 'decision'])

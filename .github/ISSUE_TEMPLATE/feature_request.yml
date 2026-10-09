@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest a capability, agent, or harness
+description: Suggest a capability, agent, or harness (Claude Code, OpenCode, Codex, Cursor, DeepSeek Harness, Oh My Pi, Gemini CLI, or another)
 labels: [enhancement]
 body:
   - type: textarea

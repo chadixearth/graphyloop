@@ -11,7 +11,7 @@ never corrected repeats its mistakes forever.
 
 ## When to activate
 
-- START of any non-trivial task, before planning.
+- START of any non-trivial task (a build, 4+ files), before the context pack and contract. Inline edits of 3 or fewer files skip memory.
 - END of any task that produced a decision, a gotcha, or a reusable approach.
 - When a past decision is being revisited ("why is it done this way?").
 
@@ -61,3 +61,5 @@ Bad, and why:
   `swarm_state` after a restart instead of trusting recall for live task status.
 - Blocked roots (home directory, harness config dirs, system dirs) refuse memory
   writes by design. Accept the skip; do not retry in another directory.
+- A build leaves two frozen files next to each other: `ctx-<slug>.md` (context
+  pack) and `contract-<slug>.md`. Store the lesson or decision, not their content.
