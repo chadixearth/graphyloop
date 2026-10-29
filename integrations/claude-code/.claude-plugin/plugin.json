@@ -1,6 +1,6 @@
 {
   "name": "graphyloop",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "GraphyLoop Workflow v3 for Claude Code: the /graphyloop:chadi-* commands, the agent squad, core workflow skills and the graphyloop MCP server (wave planner, persistent memory, secrets, preflight).",
   "author": {
     "name": "Richard Legaspi",

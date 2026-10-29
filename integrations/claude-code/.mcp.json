@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "graphyloop@0.6.0",
+        "graphyloop@0.6.1",
         "mcp"
       ]
     }
