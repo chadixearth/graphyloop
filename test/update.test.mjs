@@ -174,6 +174,29 @@ test('update is idempotent', () => {
   assert.equal(JSON.parse(cli('update', '--check', '--json', '--home', home).out).status, 'up-to-date')
 })
 
+// Regression: update ran a full install, so it also wired every tool that was
+// merely present on the machine — tools the user never added graphyloop to.
+test('update refreshes only harnesses graphyloop is already in', () => {
+  mkdirSync(join(home, '.omp', 'agent'), { recursive: true })
+  mkdirSync(join(home, '.gemini'), { recursive: true })
+  writeFileSync(join(home, '.gemini', 'settings.json'), '{"theme":"mine"}\n')
+  install()
+
+  const res = cli('update', '--home', home)
+  assert.equal(res.code, 0, res.out + res.err)
+  const notTouching = /not touching ([a-z, ]+): graphyloop was never installed there/.exec(res.out)
+  assert.ok(notTouching, res.out)
+  assert.deepEqual(notTouching[1].split(', ').sort(), ['gemini', 'omp'])
+  assert.equal(readFileSync(join(home, '.gemini', 'settings.json'), 'utf8'), '{"theme":"mine"}\n', 'gemini config untouched')
+  assert.ok(!existsSync(join(home, '.omp', 'agent', 'mcp.json')), 'no omp MCP entry')
+  assert.ok(!existsSync(join(home, '.omp', 'agent', 'agents')), 'no omp agents')
+  assert.match(res.out, /GRAPH_LOOP_UPDATED/)
+
+  // Naming a harness still adds it.
+  assert.equal(cli('update', '--harness', 'omp', '--home', home).code, 0)
+  assert.ok(JSON.parse(readFileSync(join(home, '.omp', 'agent', 'mcp.json'), 'utf8')).mcpServers.graphyloop, 'explicit --harness omp wires it')
+})
+
 test('doctor reports the installed core version and points at update when stale', () => {
   install()
   const clean = cli('doctor', '--home', home)

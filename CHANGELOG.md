@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.6.3] — 2026-10-29 — `update` stays in its lane
+
+### Fixed
+- **`update` installed graphyloop into tools you never added it to.** It ran a
+  full install, so every tool merely present on the machine got wired: MCP
+  entry, agents, skills and commands. Without `--harness` it now refreshes only
+  the tools graphyloop is already in. A stale or broken entry still counts, so
+  repairs keep working. It lists the tools it leaves alone, and
+  `--harness <name>` adds one on purpose. A machine with no graphyloop anywhere
+  still gets a first install.
+
 ## [0.6.2] — 2026-10-29 — End-to-end audit fixes
 
 Found by an end-to-end audit: every tool driven over MCP, through the adapter
@@ -827,7 +838,8 @@ Documented and tested, but never published on its own: it ships inside 0.4.0.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
-[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/chadixearth/graphyloop/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/chadixearth/graphyloop/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/chadixearth/graphyloop/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/chadixearth/graphyloop/compare/v0.5.0...v0.6.0

@@ -33,7 +33,7 @@ body:
     attributes:
       label: graphyloop version
       description: "`npx graphyloop --version`, or the version installed in ~/.graphyloop"
-      placeholder: "0.6.2"
+      placeholder: "0.6.3"
     validations:
       required: true
 

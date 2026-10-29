@@ -296,7 +296,7 @@ npx graphyloop update --check             # report the drift, write nothing
 npx graphyloop doctor                     # installed core version vs this package
 ```
 
-`update` overwrites graphyloop-owned files (timestamped backup first), repairs a core tree that is missing newer modules, and leaves your config keys, your own plugins and your edited files alone. `--check` prints `up-to-date` / `update-available` / `incomplete` / `not-installed` (add `--json` for a machine-readable answer) without touching anything. Check `doctor` first when a graphyloop tool "does not exist" in a harness that is otherwise wired correctly.
+`update` refreshes graphyloop only in the tools it is already installed in. A tool you never added it to stays untouched, and `--harness <name>` adds one. It overwrites graphyloop-owned files (timestamped backup first), repairs a core tree that is missing newer modules, and leaves your config keys, your own plugins and your edited files alone. `--check` prints `up-to-date` / `update-available` / `incomplete` / `not-installed` (add `--json` for a machine-readable answer) without touching anything. Check `doctor` first when a graphyloop tool "does not exist" in a harness that is otherwise wired correctly.
 
 ## Uninstall
 
