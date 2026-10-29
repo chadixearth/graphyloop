@@ -102,14 +102,22 @@ git push --follow-tags     # the tag is what triggers publish.yml; a tag left lo
 The publish workflow (`publish.yml`) re-runs the tests, rejects a tag that
 disagrees with `package.json`, publishes to npm through trusted publishing
 (OIDC, with provenance), then publishes `server.json` to the MCP Registry with
-GitHub OIDC. One-time npm setup, from a logged-in shell (`npm login`):
+GitHub OIDC. One-time npm setup: on npmjs.com open
+<https://www.npmjs.com/package/graphyloop/access> (it asks for your 2FA
+security key first) → *Trusted Publisher* → *GitHub Actions*, then
+`chadixearth` / `graphyloop` / `publish.yml`, environment empty, and tick
+**Allow npm publish** (only `npm stage publish` is allowed by default, and the
+workflow runs `npm publish`). The same thing from a logged-in shell:
 
 ```bash
 npm trust github graphyloop --file publish.yml --repository chadixearth/graphyloop
 ```
 
-Until that trust exists the publish step fails with `E404 PUT .../graphyloop`.
-An `NPM_TOKEN` secret is an optional fallback. *Run workflow*
+Until that trust exists the publish step fails with `E404 PUT .../graphyloop`:
+npm silently falls back to `NPM_TOKEN` when the OIDC exchange is rejected. The
+*Trusted publishing preflight* step prints the real reason (for example
+`OIDC token exchange error - package not found` = no trust saved). An
+`NPM_TOKEN` secret is an optional fallback. *Run workflow*
 (`workflow_dispatch`) takes an `otp` input and `dry_run=true` to validate the
 pipeline without shipping.
 
