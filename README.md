@@ -202,7 +202,7 @@ No. The swarm, memory and MCP tools run locally with no API keys. The only optio
 A rules file is static text that one tool reads. GraphyLoop adds a live engine behind an MCP server (persistent memory, a wave planner that writes the contract and context pack, task and file-ownership tracking) and a 25-agent squad, and installs the same workflow into seven harnesses instead of one.
 
 ### How do I uninstall GraphyLoop?
-Run `npx graphyloop uninstall`. It removes the core in `~/.graphyloop/`, the MCP entries it added, and agents, commands, skills and rules files that are still byte-identical to what it shipped (for `~/.agents/skills/`, untouched copies are removed only when neither `codex` nor `cursor` stays installed). Anything you edited, and all backups, stay.
+Run `npx graphyloop uninstall`. It removes the MCP entries it added and the agents, commands, skills and rules files that are still byte-identical to what it shipped. It removes the core in `~/.graphyloop/` once no tool uses it, and `--harness <name>` removes just one tool and leaves the others working. For `~/.agents/skills/`, untouched copies are removed only when no Codex, Cursor or Gemini CLI install still uses them. Anything you edited, and all backups, stay.
 
 ### Does GraphyLoop send my data anywhere, and does it work on Windows?
 It sends nothing anywhere: state and memory are plain files in `<project>/.graphyloop/`, the MCP server runs locally over stdio, and stored credentials are chmod 600 and never returned to the model. It works on Windows, macOS and Linux; CI runs all three on Node 20, 22 and 24, and on Windows a server-guard keeps `npm run dev` from hanging an agent session.
@@ -301,10 +301,11 @@ npx graphyloop doctor                     # installed core version vs this packa
 ## Uninstall
 
 ```bash
-npx graphyloop uninstall
+npx graphyloop uninstall                    # every tool
+npx graphyloop uninstall --harness omp      # just one tool; the others keep working
 ```
 
-Removes the core (`~/.graphyloop/`), agents/prompts/commands it installed, and the MCP entries it added — while keeping your config keys, your own files, and all backups.
+Removes the agents/prompts/commands it installed and the MCP entries it added, while keeping your config keys, your own files, and all backups. The shared core (`~/.graphyloop/`) goes with the last tool that uses it.
 
 ---
 

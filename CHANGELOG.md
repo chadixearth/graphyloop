@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.6.4] — 2026-10-29 — Partial uninstall keeps the shared core
+
+### Fixed
+- **`uninstall --harness <one tool>` broke every other tool.** It always deleted
+  the shared core in `~/.graphyloop`, which OpenCode, Claude Code, Codex,
+  DeepSeek Harness, Oh My Pi, Gemini CLI and Cursor all run their MCP server or
+  plugin from. The core is now removed only after the last tool with a
+  graphyloop entry is uninstalled; until then uninstall says which tools still
+  use it. Project memory in `<project>/.graphyloop/` was never affected.
+
 ## [0.6.3] — 2026-10-29 — `update` stays in its lane
 
 ### Fixed
@@ -838,7 +848,8 @@ Documented and tested, but never published on its own: it ships inside 0.4.0.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
-[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/chadixearth/graphyloop/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/chadixearth/graphyloop/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/chadixearth/graphyloop/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/chadixearth/graphyloop/compare/v0.6.0...v0.6.1

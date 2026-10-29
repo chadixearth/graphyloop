@@ -531,3 +531,27 @@ test('upgrade removes untouched pre-0.6.2 rules copies Claude Code and Cursor ne
     rmSync(home, { recursive: true, force: true })
   }
 })
+
+// Regression: uninstall removed the shared core first, whatever --harness said,
+// so `uninstall --harness omp` broke every other harness that runs from it.
+test('partial uninstall keeps the core while another harness still uses it', () => {
+  const home = mkdtempSync(join(tmpdir(), 'gl-partial-uninstall-'))
+  try {
+    mkdirSync(join(home, '.omp', 'agent'), { recursive: true })
+    mkdirSync(join(home, '.claude'), { recursive: true })
+    assert.equal(runCli(['install', '--home', home, '--harness', 'claude,omp']).status, 0)
+    const coreMcp = join(home, '.graphyloop', 'mcp-server.mjs')
+
+    let res = runCli(['uninstall', '--home', home, '--harness', 'omp'])
+    assert.equal(res.status, 0, res.stdout + res.stderr)
+    assert.match(res.stdout, /keep ~\/\.graphyloop: claude still uses it/)
+    assert.ok(existsSync(coreMcp), 'core kept for claude')
+    assert.match(runCli(['doctor', '--home', home]).stdout, /claude\s+present\s+yes/, 'claude still wired')
+
+    res = runCli(['uninstall', '--home', home, '--harness', 'claude'])
+    assert.equal(res.status, 0, res.stdout + res.stderr)
+    assert.ok(!existsSync(coreMcp), 'core removed with the last harness that used it')
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})

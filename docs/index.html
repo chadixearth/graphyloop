@@ -31,7 +31,7 @@
   "url": "https://chadixearth.github.io/graphyloop/",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "softwareVersion": "0.6.3",
+  "softwareVersion": "0.6.4",
   "dateModified": "2026-10-29",
   "license": "https://opensource.org/licenses/MIT",
   "offers": {
@@ -139,7 +139,7 @@
       "name": "How do I uninstall GraphyLoop?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Run npx graphyloop uninstall. It removes the core in ~/.graphyloop/, the MCP entries it added, and agents, commands, skills and rules files that are still byte-identical to what it shipped (for ~/.agents/skills/, untouched copies are removed only when neither codex nor cursor stays installed). Anything you edited, and all backups, stay."
+        "text": "Run npx graphyloop uninstall. It removes the MCP entries it added and the agents, commands, skills and rules files that are still byte-identical to what it shipped. It removes the core in ~/.graphyloop/ once no tool uses it, and --harness <name> removes just one tool and leaves the others working. For ~/.agents/skills/, untouched copies are removed only when no Codex, Cursor or Gemini CLI install still uses them. Anything you edited, and all backups, stay."
       }
     },
     {
@@ -376,7 +376,7 @@ footer ul{list-style:none;padding:0;margin:0 0 14px;display:flex;flex-wrap:wrap;
 <h3>How is it different from a plain AGENTS.md or CLAUDE.md?</h3>
 <p>A rules file is static text that one tool reads. GraphyLoop adds a live engine behind an MCP server (persistent memory, a wave planner that writes the contract and context pack, task and file-ownership tracking) and a 25-agent squad, and installs the same workflow into seven harnesses instead of one.</p>
 <h3>How do I uninstall GraphyLoop?</h3>
-<p>Run <code>npx graphyloop uninstall</code>. It removes the core in <code>~/.graphyloop/</code>, the MCP entries it added, and agents, commands, skills and rules files that are still byte-identical to what it shipped (for <code>~/.agents/skills/</code>, untouched copies are removed only when neither <code>codex</code> nor <code>cursor</code> stays installed). Anything you edited, and all backups, stay.</p>
+<p>Run <code>npx graphyloop uninstall</code>. It removes the MCP entries it added and the agents, commands, skills and rules files that are still byte-identical to what it shipped. It removes the core in <code>~/.graphyloop/</code> once no tool uses it, and <code>--harness &lt;name&gt;</code> removes just one tool and leaves the others working. For <code>~/.agents/skills/</code>, untouched copies are removed only when no Codex, Cursor or Gemini CLI install still uses them. Anything you edited, and all backups, stay.</p>
 <h3>Does GraphyLoop send my data anywhere, and does it work on Windows?</h3>
 <p>It sends nothing anywhere: state and memory are plain files in <code>&lt;project&gt;/.graphyloop/</code>, the MCP server runs locally over stdio, and stored credentials are chmod 600 and never returned to the model. It works on Windows, macOS and Linux; CI runs all three on Node 20, 22 and 24, and on Windows a server-guard keeps <code>npm run dev</code> from hanging an agent session.</p>
 </section>
@@ -392,7 +392,7 @@ footer ul{list-style:none;padding:0;margin:0 0 14px;display:flex;flex-wrap:wrap;
 <li><a href="https://github.com/chadixearth/graphyloop/issues">Issues</a></li>
 <li><a href="llms.txt">llms.txt</a></li>
 </ul>
-<p>GraphyLoop 0.6.3 · MIT © 2026 Richard Legaspi (<a href="https://github.com/chadixearth">chadixearth</a>)</p>
+<p>GraphyLoop 0.6.4 · MIT © 2026 Richard Legaspi (<a href="https://github.com/chadixearth">chadixearth</a>)</p>
 </div>
 </footer>
 <script>
