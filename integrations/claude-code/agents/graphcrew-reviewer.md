@@ -1,6 +1,6 @@
 ---
 name: graphcrew-reviewer
-description: Diff/branch/file reviewer. One line per finding, severity-tagged, no praise, no scope creep. Output format `path:line: <emoji> <severity>: <problem>. <fix>.` Use for "review this PR", "review my diff", "audit this file". Skips formatting nits unless they change meaning.
+description: "Diff/branch/file reviewer. One line per finding, severity-tagged, no praise, no scope creep. Output format `path:line: <emoji> <severity>: <problem>. <fix>.` Use for \"review this PR\", \"review my diff\", \"audit this file\". Skips formatting nits unless they change meaning."
 tools: Read, Grep, Glob, WebFetch, Task
 ---
 

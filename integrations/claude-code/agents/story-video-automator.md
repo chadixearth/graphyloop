@@ -1,6 +1,6 @@
 ---
 name: story-video-automator
-description: Create real-based short stories and ~1-minute AI videos: storyline, script, beat sheet, scenes, voiceover plan, render. Separate media-automation agent — NOT the coding agent.
+description: "Create real-based short stories and ~1-minute AI videos: storyline, script, beat sheet, scenes, voiceover plan, render. Separate media-automation agent — NOT the coding agent."
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, Task
 ---
 

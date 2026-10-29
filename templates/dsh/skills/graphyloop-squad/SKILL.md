@@ -1,6 +1,6 @@
 ---
 name: graphyloop-squad
-description: Use this skill in the DeepSeek Harness whenever a task is worth more than one edit - anything you would plan, split across roles, verify, or remember. It maps the graphyloop 5-gate workflow onto dsh's own primitives: the mcp__graphyloop__* tools for swarm, memory and wave planning, and the subagent tool for delegation with a squad role prompt.
+description: "Use this skill in the DeepSeek Harness whenever a task is worth more than one edit - anything you would plan, split across roles, verify, or remember. It maps the graphyloop 5-gate workflow onto dsh's own primitives: the mcp__graphyloop__* tools for swarm, memory and wave planning, and the subagent tool for delegation with a squad role prompt."
 ---
 
 # GraphyLoop squad in dsh

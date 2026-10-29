@@ -1,6 +1,6 @@
 ---
 name: short-video-production
-description: Use when turning a finished story or script into a rendered ~1-minute video: HyperFrames composition, scene timing, captions, voiceover sync, 9:16 export. Not for story writing (use story-engineering).
+description: "Use when turning a finished story or script into a rendered ~1-minute video: HyperFrames composition, scene timing, captions, voiceover sync, 9:16 export. Not for story writing (use story-engineering)."
 ---
 
 # Short Video Production

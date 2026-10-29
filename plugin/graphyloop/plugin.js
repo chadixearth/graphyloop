@@ -9,12 +9,12 @@
 // LLM work is still done by OpenCode task subagents; this only coordinates.
 
 import { existsSync, realpathSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { spawn as spawnProcess } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { tool } from '@opencode-ai/plugin';
 
-const HOME = os.homedir();
+const HOME = process.env.GRAPHYLOOP_HOME || os.homedir();
 const DEFAULT_CLI = path.join(HOME, '.graphyloop', 'graphyloop', 'cli.mjs');
 // CLI location: env override, else the graphyloop core install target. The
 // override is only trusted when it is absolute, existing, and a .mjs file — a
@@ -33,19 +33,53 @@ const NODE_CANDIDATES = [
   'node',
 ].filter(Boolean);
 
+// Runs a child to completion with our own kill timer. Never spawnSync's
+// `timeout`: Bun 1.3.2–1.3.14 on Windows (OpenCode 1.18 ships 1.3.14) arms that
+// timer on a cached loop whose clock goes stale while idle, so a call made more
+// than `timeout` ms after the previous spawnSync dies at once with ETIMEDOUT
+// (oven-sh/bun#33932). In a squad run that hit 2 of 10 calls. Async spawn has no
+// such clock, and it no longer blocks OpenCode's event loop while the CLI runs.
+function runChild(cmd, args, { env, timeoutMs }) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawnProcess(cmd, args, { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (error) {
+      resolve({ error, stdout: '', stderr: '' });
+      return;
+    }
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    let settled = false;
+    const timer = setTimeout(() => { timedOut = true; child.kill(); }, timeoutMs);
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ stdout, stderr, timedOut, ...result });
+    };
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', (error) => finish({ error }));
+    child.on('close', (status, signal) => finish({ status, signal }));
+  });
+}
+
 // Resolved once per process — probing `node --version` on every CLI call adds
 // ~100ms per graphyloop tool use for a path that never changes mid-session.
-let cachedNode = null;
+let nodePath = null;
 function findNode() {
-  if (cachedNode) return cachedNode;
-  for (const candidate of NODE_CANDIDATES) {
-    try {
-      const check = spawnSync(candidate, ['--version'], { timeout: 3000, stdio: 'ignore', windowsHide: true });
-      if (check.status === 0) { cachedNode = candidate; return cachedNode; }
-    } catch { /* try next */ }
-  }
-  cachedNode = 'node';
-  return cachedNode;
+  nodePath ??= (async () => {
+    for (const candidate of NODE_CANDIDATES) {
+      const check = await runChild(candidate, ['--version'], { env: process.env, timeoutMs: 3000 });
+      if (!check.error && check.status === 0) return candidate;
+    }
+    return 'node';
+  })();
+  return nodePath;
 }
 
 // Canonical form of a path: symlinks resolved, or plain resolve() when the path
@@ -82,44 +116,52 @@ function isBlockedRoot(root) {
   return samePath(root, HOME) || samePath(root, OPENCODE_ROOT);
 }
 
+const CLI_TIMEOUT_MS = 30000;
+
 // Runs a graphyloop CLI command with the project dir set, returns parsed JSON.
 // extraEnv carries values that must not appear on argv (credentials).
-function runCli(args, projectDir, extraEnv) {
+async function runCli(args, projectDir, extraEnv) {
   if (isBlockedRoot(projectDir)) {
     return { error: `graphyloop skipped: ${projectDir} is not a project root (system dir, home, or opencode config)` };
   }
-  const node = findNode();
-  const res = spawnSync(node, [GRAPHYLOOP_CLI, ...args], {
-    encoding: 'utf-8',
-    timeout: 30000,
-    windowsHide: true,
-    env: { ...process.env, GRAPHYLOOP_PROJECT_ROOT: projectDir, ...(extraEnv || {}) },
-  });
+  const node = await findNode();
+  const env = { ...process.env, GRAPHYLOOP_PROJECT_ROOT: projectDir, ...(extraEnv || {}) };
+  // Parallel tool calls may run CLIs concurrently: the engine's state lock
+  // (lib/engine.mjs withLock) serializes their read-modify-write of state.json.
+  const res = await runChild(node, [GRAPHYLOOP_CLI, ...args], { env, timeoutMs: CLI_TIMEOUT_MS });
   if (res.error) return { error: `spawn failed: ${res.error.message}` };
   // The CLI reports its own failures as {error} on stdout with exit 0, so a
-  // signal or non-zero status means it crashed or hit the 30s timeout — without
-  // these two checks that surfaced as a confusing empty "bad CLI output:".
-  if (res.signal) return { error: `graphyloop CLI killed by signal ${res.signal} (timeout is 30s)` };
+  // timeout, signal, or non-zero status means it hung or crashed — without
+  // these checks that surfaced as a confusing empty "bad CLI output:".
+  if (res.timedOut) return { error: `graphyloop CLI timed out after ${CLI_TIMEOUT_MS / 1000}s` };
+  if (res.signal) return { error: `graphyloop CLI killed by signal ${res.signal}` };
   const out = (res.stdout || '').trim();
   if (res.status !== 0) {
     return { error: `graphyloop CLI exited with code ${res.status}: ${out || (res.stderr || '').trim()}` };
   }
+  let parsed;
   try {
-    return JSON.parse(out);
+    parsed = JSON.parse(out);
   } catch {
     return { error: `bad CLI output: ${(out || res.stderr || '').slice(0, 300)}` };
   }
+  if (args[0] !== 'init' && args[0] !== 'shutdown' && parsed && parsed.error === 'not initialized') {
+    initOk.delete(projectDir);
+    const reinit = await ensureInit(projectDir);
+    if (!reinit.error) return runCli(args, projectDir, extraEnv);
+  }
+  return parsed;
 }
 
 // Ensure swarm initialized before any tool use (idempotent).
 // Successful init is cached per root — without this every graphyloop tool call pays
 // an extra `node cli.mjs init` spawn (~200ms) for a no-op re-init.
 const initOk = new Map();
-function ensureInit(projectDir) {
+async function ensureInit(projectDir) {
   if (!existsSync(GRAPHYLOOP_CLI)) return { error: `graphyloop CLI not found at ${GRAPHYLOOP_CLI}` };
   const cached = initOk.get(projectDir);
   if (cached) return cached;
-  const res = runCli(['init'], projectDir);
+  const res = await runCli(['init'], projectDir);
   if (res.error) return res;
   const ok = { ok: true, alreadyInitialized: !!res.message, swarm: res };
   initOk.set(projectDir, ok);
@@ -129,10 +171,10 @@ function ensureInit(projectDir) {
 // The CLI init is idempotent but costs a node spawn; only pay it once per root
 // per process.
 const autoInitDone = new Set();
-function autoInit(projectDir) {
+async function autoInit(projectDir) {
   if (!projectDir || autoInitDone.has(projectDir)) return;
   autoInitDone.add(projectDir);
-  try { ensureInit(projectDir); } catch { /* non-fatal */ }
+  try { await ensureInit(projectDir); } catch { /* non-fatal */ }
 }
 
 export default async (input) => {
@@ -144,7 +186,7 @@ export default async (input) => {
     // the sibling caveman / repo-index-init plugins.
     event: async ({ event } = {}) => {
       if (event?.type !== 'session.created') return;
-      autoInit(event?.properties?.directory || event?.properties?.worktree || projectDir);
+      await autoInit(event?.properties?.directory || event?.properties?.worktree || projectDir);
     },
 
     // Backstop for one-shot `opencode run` and sessions where session.created
@@ -152,22 +194,22 @@ export default async (input) => {
     // (input, output) — input carries sessionID/agent/model, NOT the message,
     // so there is nothing to match on; the Set guard makes the repeat calls free.
     'chat.message': async () => {
-      autoInit(projectDir);
+      await autoInit(projectDir);
     },
 
     tool: {
       graphyloop_init: tool({
         description: 'Initialize the graphyloop swarm (leader agent + memory store). Idempotent — safe to call anytime. Call this first if unsure.',
         args: {},
-        async execute() { return JSON.stringify(ensureInit(projectDir)); },
+        async execute() { return JSON.stringify(await ensureInit(projectDir)); },
       }),
 
       graphyloop_status: tool({
         description: 'Show graphyloop swarm status: agents (type/role/health), tasks completed/failed, memory entries, pending tasks.',
         args: {},
         async execute() {
-          const init = ensureInit(projectDir);
-          const status = runCli(['status'], projectDir);
+          const init = await ensureInit(projectDir);
+          const status = await runCli(['status'], projectDir);
           return JSON.stringify({ init, status }, null, 2);
         },
       }),
@@ -187,8 +229,8 @@ export default async (input) => {
             ...(args.capabilities ? ['--capabilities', args.capabilities] : []),
             ...(args.role ? ['--role', args.role] : []),
           ];
-          const res = ensureInit(projectDir);
-          const spawn = runCli(a, projectDir);
+          const res = await ensureInit(projectDir);
+          const spawn = await runCli(a, projectDir);
           return JSON.stringify({ init: res, spawn }, null, 2);
         },
       }),
@@ -204,8 +246,8 @@ export default async (input) => {
           catch { return JSON.stringify({ error: 'tasks must be valid JSON array string' }); }
           if (!Array.isArray(parsed)) return JSON.stringify({ error: 'tasks must be a JSON array' });
           if (parsed.length === 0) return JSON.stringify({ error: 'tasks array is empty' });
-          const res = ensureInit(projectDir);
-          const dist = runCli(['distribute', '--tasks', args.tasks], projectDir);
+          const res = await ensureInit(projectDir);
+          const dist = await runCli(['distribute', '--tasks', args.tasks], projectDir);
           return JSON.stringify({
             init: res,
             assignments: dist.assignments || dist,
@@ -228,7 +270,7 @@ export default async (input) => {
           const a = ['record', '--taskId', args.taskId, '--status', args.status];
           if (args.agentId) a.push('--agentId', args.agentId);
           if (args.error) a.push('--error', args.error);
-          const res = runCli(a, projectDir);
+          const res = await runCli(a, projectDir);
           return JSON.stringify(res);
         },
       }),
@@ -247,8 +289,8 @@ export default async (input) => {
             '--content', args.content,
             '--type', args.type || 'event'];
           if (args.metadata) a.push('--metadata', args.metadata);
-          const res = ensureInit(projectDir);
-          const store = runCli(a, projectDir);
+          const res = await ensureInit(projectDir);
+          const store = await runCli(a, projectDir);
           return JSON.stringify({ init: res, store }, null, 2);
         },
       }),
@@ -264,8 +306,8 @@ export default async (input) => {
           const a = ['memory-search', '--query', args.query];
           if (args.limit) a.push('--limit', args.limit);
           if (args.type) a.push('--type', args.type);
-          const res = ensureInit(projectDir);
-          const search = runCli(a, projectDir);
+          const res = await ensureInit(projectDir);
+          const search = await runCli(a, projectDir);
           return JSON.stringify({ init: res, search }, null, 2);
         },
       }),
@@ -277,14 +319,14 @@ export default async (input) => {
         },
         async execute(args) {
           if (!args.id || !args.id.trim()) return JSON.stringify({ error: 'id is required (take it from graphyloop_memory_search)' });
-          const res = ensureInit(projectDir);
-          const forget = runCli(['memory-forget', '--id', args.id], projectDir);
+          const res = await ensureInit(projectDir);
+          const forget = await runCli(['memory-forget', '--id', args.id], projectDir);
           return JSON.stringify({ init: res, forget }, null, 2);
         },
       }),
 
       graphyloop_plan_feature: tool({
-        description: 'Plan a multi-layer feature as parallel waves BEFORE coding. Returns wave 0 (one agent freezes the contract: schema + API + props + test scenarios, AND the context pack ctx-<slug>.md next to it: per lane path:line + current code excerpt + pattern to copy) -> wave 1 parallel builders (data ∥ backend ∥ frontend ∥ tests) -> wave 2 integration -> wave 3 parallel verifiers (test ∥ typecheck ∥ security ∥ performance ∥ review) -> wave 4 gated deploy. Each task carries its owned files, acceptance check and dependsOn, and every lane brief ends with the turn-economy footer (batch reads, first edit by turn 5, no project-wide lint/test/build). A goal touching 3 known files or fewer answers shape no-fanout (inlineThreshold 3): do it inline. Feed plan.tasks to graphyloop_distribute.',
+        description: 'Plan a multi-layer feature as parallel waves BEFORE coding. Returns wave 0 (one agent freezes the contract: schema + API + props + test scenarios, AND the context pack ctx-<slug>.md next to it: per lane path:line + current code excerpt + pattern to copy) -> wave 1 parallel builders (data ∥ backend ∥ frontend ∥ tests) -> wave 2 integration -> wave 3 parallel verifiers (test ∥ typecheck ∥ security ∥ performance ∥ review) -> wave 4 gated deploy. Each task carries its owned files, acceptance check and dependsOn, and every lane brief ends with the turn-economy footer (batch reads, first edit by turn 5, no project-wide lint/test/build). A goal touching 8 known files or fewer answers shape no-fanout (inlineThreshold 8): do it inline. Feed plan.tasks to graphyloop_distribute.',
         args: {
           goal: tool.schema.string().describe('The feature request in plain words, e.g. "inventory system with stock levels and a dashboard"'),
           includeDeploy: tool.schema.string().optional().describe('"true" to force the deploy wave on'),
@@ -295,8 +337,8 @@ export default async (input) => {
           const a = ['plan', '--goal', args.goal];
           if (args.includeDeploy === 'true' || args.includeDeploy === true) a.push('--deploy');
           if (args.maxParallel) a.push('--maxParallel', String(args.maxParallel));
-          const init = ensureInit(projectDir);
-          const plan = runCli(a, projectDir);
+          const init = await ensureInit(projectDir);
+          const plan = await runCli(a, projectDir);
           return JSON.stringify({ init, plan }, null, 2);
         },
       }),
@@ -309,7 +351,7 @@ export default async (input) => {
         async execute(args) {
           const a = ['secrets-status'];
           if (args.provider) a.push('--provider', args.provider);
-          return JSON.stringify(runCli(a, projectDir), null, 2);
+          return JSON.stringify(await runCli(a, projectDir), null, 2);
         },
       }),
 
@@ -325,10 +367,10 @@ export default async (input) => {
           if (!args.value || !args.value.trim()) return JSON.stringify({ error: 'value is required' });
           const a = ['secrets-set', '--key', args.key];
           if (args.provider) a.push('--provider', args.provider);
-          const init = ensureInit(projectDir);
+          const init = await ensureInit(projectDir);
           // Passed through the env, not argv: an argv credential is visible in the
           // process list to every other user on the machine.
-          const set = runCli(a, projectDir, { GRAPHYLOOP_SECRET_VALUE: args.value });
+          const set = await runCli(a, projectDir, { GRAPHYLOOP_SECRET_VALUE: args.value });
           return JSON.stringify({ init, set }, null, 2);
         },
       }),
@@ -345,7 +387,7 @@ export default async (input) => {
           if (args.target) a.push('--target', args.target);
           if (args.providers) a.push('--providers', args.providers);
           if (args.force === 'true' || args.force === true) a.push('--force');
-          return JSON.stringify(runCli(a, projectDir), null, 2);
+          return JSON.stringify(await runCli(a, projectDir), null, 2);
         },
       }),
 
@@ -359,7 +401,7 @@ export default async (input) => {
           if (!['db', 'deploy', 'all'].includes(target)) {
             return JSON.stringify({ error: 'target must be one of: db, deploy, all' });
           }
-          return JSON.stringify(runCli(['preflight', '--target', target], projectDir), null, 2);
+          return JSON.stringify(await runCli(['preflight', '--target', target], projectDir), null, 2);
         },
       }),
 
@@ -367,7 +409,7 @@ export default async (input) => {
         description: 'Which skills are installed on this machine (project .opencode/skills, .dsh/skills, .agents/skills; ~/.config/opencode/skills, ~/.claude/skills, ~/.dsh/skills, ~/.omp/agent/skills, ~/.gemini/skills, ~/.agents/skills), which graphyloop-bundled skills are present (70, of which 12 are graphyloop-authored: graphyloop-waves, graphyloop-workflow, api-contract-design, api-hardening, frontend-security, web-accessibility, web-performance, dependency-audit, supabase-setup, vercel-deploy, secrets-hygiene, swarm-memory), and which skills the squad routes on but are missing. Check here instead of guessing — a missing skill is reported in one line, never faked.',
         args: {},
         async execute() {
-          return JSON.stringify(runCli(['skills'], projectDir), null, 2);
+          return JSON.stringify(await runCli(['skills'], projectDir), null, 2);
         },
       }),
 
@@ -375,7 +417,7 @@ export default async (input) => {
         description: 'Shut down the swarm (terminates agents, keeps memory). Call at session end.',
         args: {},
         async execute() {
-          const res = runCli(['shutdown'], projectDir);
+          const res = await runCli(['shutdown'], projectDir);
           // Shutdown flips the state back to uninitialized. Without dropping the
           // cached init, every later tool call in this session would keep
           // reporting "not initialized" instead of restarting the swarm.

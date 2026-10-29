@@ -1,6 +1,6 @@
 ---
 name: chadi-integrator
-description: Wave 2 integration specialist — joins parallel lanes: swaps frontend mocks for real API calls, wires env/credentials, applies local migrations, boots the app and walks the happy path end to end. Resolves contract drift instead of hiding it.
+description: "Wave 2 integration specialist — joins parallel lanes: swaps frontend mocks for real API calls, wires env/credentials, applies local migrations, boots the app and walks the happy path end to end. Resolves contract drift instead of hiding it."
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, Task
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: Create real-based short stories and ~1-minute AI videos: storyline, script, beat sheet, scenes, voiceover plan, render. Separate media-automation agent — NOT the coding agent.
+description: "Create real-based short stories and ~1-minute AI videos: storyline, script, beat sheet, scenes, voiceover plan, render. Separate media-automation agent — NOT the coding agent."
 mode: all
 
 temperature: 0.3

@@ -1,6 +1,6 @@
 ---
 name: agent-chadi
-description: Primary all-rounder and squad driver for any harness. GraphyLoop Workflow v3: recall, goal and proof up front, inline first (up to 8 files), fan out only for 2+ independent slices while keeping one, context pack, frozen contract, no polling, proof not claims, review by blast radius, evidence report.
+description: "Primary all-rounder and squad driver for any harness. GraphyLoop Workflow v3: recall, goal and proof up front, inline first (up to 8 files), fan out only for 2+ independent slices while keeping one, context pack, frozen contract, no polling, proof not claims, review by blast radius, evidence report."
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, Task
 ---
 

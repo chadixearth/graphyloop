@@ -1,6 +1,6 @@
 ---
 name: story-engineering
-description: Use when creating a storyline, script, or narrative for short-form video (60-90 seconds): story hooks, beat sheets, story frameworks, real-based/true-story structure, retention rules. Not for coding tasks.
+description: "Use when creating a storyline, script, or narrative for short-form video (60-90 seconds): story hooks, beat sheets, story frameworks, real-based/true-story structure, retention rules. Not for coding tasks."
 ---
 
 # Story Engineering

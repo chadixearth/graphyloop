@@ -5,14 +5,14 @@ GraphyLoop wires **7 harnesses**. `npx graphyloop` detects the ones you have and
 | Harness | Name | Detected when | MCP entry written to | Agents | Commands | Skills | Workflow rules |
 |---|---|---|---|---|---|---|---|
 | **OpenCode** | `opencode` | `~/.config/opencode/` | `opencode.json` plugin entries (`graphyloop_*` tools) + server-guard | `~/.config/opencode/agents/` — 26 files | 15 `/chadi-*` | `~/.config/opencode/skills/` | `AGENTS.md` |
-| **Claude Code** | `claude` | `~/.claude.json` or `~/.claude/` | `~/.claude.json` → `mcpServers.graphyloop` (or install via the Claude Code plugin; see below) | `~/.claude/agents/` — 26 files | 15 `/chadi-*` | `~/.claude/skills/` | `~/.claude/AGENTS.md` |
+| **Claude Code** | `claude` | `~/.claude.json` or `~/.claude/` | `~/.claude.json` → `mcpServers.graphyloop` (or install via the Claude Code plugin; see below) | `~/.claude/agents/` — 26 files | 15 `/chadi-*` | `~/.claude/skills/` | `~/.claude/rules/graphyloop-workflow.md` |
 | **Codex** | `codex` | `~/.codex/` | `~/.codex/config.toml` → `[mcp_servers.graphyloop]` | 15 prompts | 15 prompts (`/prompts:chadi-init`) | `~/.agents/skills/` | `AGENTS.md` |
-| **Cursor / Windsurf** | `cursor` | `~/.cursor/` | `~/.cursor/mcp.json` → `mcpServers.graphyloop` | — | — | `~/.agents/skills/` | `~/.cursor/rules/AGENTS.md` |
+| **Cursor / Windsurf** | `cursor` | `~/.cursor/` | `~/.cursor/mcp.json` → `mcpServers.graphyloop` | — | — | `~/.agents/skills/` | — (loads from `graphyloop-workflow` in `~/.agents/skills/`; project init writes `<project>/AGENTS.md`) |
 | **DeepSeek Harness** | `dsh` | `~/.dsh/` or `$DSH_HOME` | `~/.dsh/cordis.patch.yml` row `id: graphyloop-mcp` | 26 role prompts + `graphyloop-squad` skill | — (dsh commands are plugins) | `~/.dsh/skills/` | `~/.dsh/AGENTS.md` |
 | **Oh My Pi** | `omp` | `~/.omp/` | `~/.omp/agent/mcp.json` → `mcpServers.graphyloop` (other keys, incl. `disabledServers`, kept) | `~/.omp/agent/agents/` — 26 squad files (`name` + `description` only, so they inherit your model) | — (omp has no file commands) | `~/.omp/agent/skills/` | `~/.omp/agent/AGENTS.md` **only when absent** |
-| **Gemini CLI** | `gemini` | `~/.gemini/` | `~/.gemini/settings.json` → `mcpServers.graphyloop` | — | `~/.gemini/commands/<name>.toml` (`/chadi-init` …) | `~/.gemini/skills/` | `~/.gemini/GEMINI.md` **only when absent** |
+| **Gemini CLI** | `gemini` | `~/.gemini/` | `~/.gemini/settings.json` → `mcpServers.graphyloop` | — | `~/.gemini/commands/<name>.toml` (`/chadi-init` …) | `~/.gemini/skills/` (skipped when `~/.agents/skills/` is already populated) | `~/.gemini/GEMINI.md` **only when absent** |
 
-Oh My Pi and Gemini CLI never lose a rules file you already wrote: if `~/.omp/agent/AGENTS.md` or `~/.gemini/GEMINI.md` exists and differs, GraphyLoop keeps it — even with `--force` — and the workflow loads on demand from the bundled `graphyloop-workflow` skill instead.
+Claude Code reads user-scope instructions from `~/.claude/CLAUDE.md` and `~/.claude/rules/*.md` (`AGENTS.md` is project-only), so GraphyLoop writes `~/.claude/rules/graphyloop-workflow.md`. Cursor ignores plain `.md` files in `.cursor/rules/` (project rules must be `.mdc`) and stores global User Rules in its settings UI (`Customize → Rules`), so GraphyLoop writes no rules file for Cursor — the workflow loads from the `graphyloop-workflow` skill in `~/.agents/skills/`, and running "run the graphyloop workflow init" inside a project writes that project's `AGENTS.md`, which Cursor reads from the project root. Oh My Pi and Gemini CLI never lose a rules file you already wrote: if `~/.omp/agent/AGENTS.md` or `~/.gemini/GEMINI.md` exists and differs, GraphyLoop keeps it — even with `--force` — and the workflow loads on demand from the bundled `graphyloop-workflow` skill instead.
 
 Uninstall removes only what GraphyLoop wrote: the MCP key (when it is GraphyLoop-shaped) and agents, commands, skills and rules files that are byte-identical to the shipped copies. For `~/.agents/skills/` (shared by `codex` and `cursor`), uninstall removes untouched copies only when no other GraphyLoop harness that uses `~/.agents/skills` stays installed.
 
@@ -53,6 +53,11 @@ codex mcp list                 # graphyloop ... enabled
 ```
 
 `doctor` ends with `GRAPH_LOOP_DOCTOR_OK` when every present harness is wired and the core is up to date, otherwise `GRAPH_LOOP_DOCTOR_ISSUES <n>`.
+
+
+## Gemini CLI sign-in note
+
+Since June 18, 2026 Google no longer serves personal Google sign-ins (Google AI Pro/Ultra and free Code Assist for individuals) in Gemini CLI (`This client is no longer supported for Gemini Code Assist for individuals`). Gemini CLI still works with a Gemini API key (`GEMINI_API_KEY`), Vertex AI, or a Code Assist Standard/Enterprise license. Google's successor for individual accounts is Antigravity CLI (`agy`), which is not a GraphyLoop harness yet ([update](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/)).
 
 ## DeepSeek Harness (`dsh`) notes
 

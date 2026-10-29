@@ -144,7 +144,8 @@ try {
     }
     case 'record':
       output(engine.record({
-        taskId: getArg('taskId'), status: getArg('status'), agentId: getArg('agentId'),
+        taskId: getArg('taskId'), status: getArg('status'),
+        agentId: getArg('agentId'), error: getArg('error') || undefined,
       }));
       break;
     case 'memory-store':

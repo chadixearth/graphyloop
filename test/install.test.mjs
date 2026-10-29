@@ -7,7 +7,7 @@
 // `node bin/graphyloop.mjs install|doctor` via spawnSync with --home <sandbox>.
 //
 // Asserts: user keys preserved everywhere, graphyloop entries added exactly once,
-// agents dirs populated, 12 commands per harness, AGENTS.md installed, re-runs
+// agents dirs populated, 12 commands per harness, workflow rules where each harness reads them, re-runs
 // idempotent, --skip-agents leaves agents untouched, doctor lists all 7 harnesses.
 // No network, no npm deps. Run with: node --test test/
 
@@ -235,7 +235,9 @@ test('install --harness all --force installs every harness and preserves user co
     assert.match(text, /^---\r?\n/, `${f}: command frontmatter`)
     assert.match(frontmatterOf(text), /description:/, `${f}: description`)
   }
-  assert.ok(existsSync(join(sandbox, '.claude', 'AGENTS.md')), 'claude AGENTS.md installed')
+  // Claude Code reads user rules from ~/.claude/rules/*.md; AGENTS.md only at project scope.
+  assert.ok(existsSync(join(sandbox, '.claude', 'rules', 'graphyloop-workflow.md')), 'claude workflow installed as a user rule')
+  assert.ok(!existsSync(join(sandbox, '.claude', 'AGENTS.md')), 'no dead ~/.claude/AGENTS.md')
 
   // --- codex ---
   const toml = readFileSync(join(sandbox, '.codex', 'config.toml'), 'utf8')
@@ -261,7 +263,8 @@ test('install --harness all --force installs every harness and preserves user co
   )
   assert.ok(cursorJson.mcpServers.graphyloop, 'graphyloop mcp entry added to cursor')
   assert.equal(Object.keys(cursorJson.mcpServers).filter((k) => k === 'graphyloop').length, 1)
-  assert.ok(existsSync(join(sandbox, '.cursor', 'rules', 'AGENTS.md')), 'cursor AGENTS.md installed')
+  // Cursor ignores plain .md files in rules/ and keeps User Rules in its settings UI.
+  assert.ok(!existsSync(join(sandbox, '.cursor', 'rules', 'AGENTS.md')), 'no dead ~/.cursor/rules/AGENTS.md')
   assert.ok(
     existsSync(join(sandbox, '.agents', 'skills', 'graphyloop-workflow', 'SKILL.md')),
     'codex/cursor shared ~/.agents/skills installed'
@@ -498,4 +501,33 @@ test('doctor lists all seven harnesses with wired status and an OK marker', () =
   }
   assert.match(res.stdout, /\bwired\b/, 'doctor has a wired column')
   assert.match(res.stdout, /GRAPH_LOOP_DOCTOR_OK/, res.stdout)
+})
+
+test('upgrade removes untouched pre-0.6.2 rules copies Claude Code and Cursor never loaded, keeps edited ones', () => {
+  const home = mkdtempSync(join(tmpdir(), 'gl-rules-migrate-'))
+  try {
+    const workflow = readFileSync(join(REPO_ROOT, 'workflow', 'AGENTS.md'), 'utf8')
+    write(home, '.claude/AGENTS.md', workflow)
+    write(home, '.cursor/rules/AGENTS.md', workflow)
+    write(home, '.cursor/rules/team.mdc', '---\nalwaysApply: true\n---\nuser rule\n')
+    let res = runCli(['install', '--home', home, '--harness', 'claude,cursor'])
+    assert.equal(res.status, 0, res.stdout + res.stderr)
+    assert.ok(!existsSync(join(home, '.claude', 'AGENTS.md')), 'untouched legacy claude copy removed')
+    assert.ok(!existsSync(join(home, '.cursor', 'rules', 'AGENTS.md')), 'untouched legacy cursor copy removed')
+    assert.ok(existsSync(join(home, '.cursor', 'rules', 'team.mdc')), 'user cursor rule kept')
+    assert.equal(readFileSync(join(home, '.claude', 'rules', 'graphyloop-workflow.md'), 'utf8'), workflow)
+
+    // A legacy copy the user edited is theirs: never removed.
+    write(home, '.claude/AGENTS.md', `${workflow}\nmy own line\n`)
+    res = runCli(['install', '--home', home, '--harness', 'claude'])
+    assert.equal(res.status, 0, res.stdout + res.stderr)
+    assert.ok(existsSync(join(home, '.claude', 'AGENTS.md')), 'edited legacy copy kept')
+
+    res = runCli(['uninstall', '--home', home, '--harness', 'claude,cursor'])
+    assert.equal(res.status, 0, res.stdout + res.stderr)
+    assert.ok(!existsSync(join(home, '.claude', 'rules')), 'graphyloop rule removed and empty rules dir pruned')
+    assert.ok(existsSync(join(home, '.claude', 'AGENTS.md')), 'edited legacy copy survives uninstall')
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
 })

@@ -4,6 +4,72 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.6.2] — 2026-10-29 — End-to-end audit fixes
+
+Found by an end-to-end audit: every tool driven over MCP, through the adapter
+CLI and through the OpenCode plugin, plus live model runs in OpenCode and Oh My
+Pi where agent-chadi planned, dispatched two subagents and shipped a tested
+endpoint.
+
+### Fixed
+- **`plan_feature` over-planned small work.** "Add a /health endpoint to this
+  Node app" came back as an 11-task full-stack plan that asked for three
+  Supabase keys, because the word *app* implied full stack. Now *app* implies
+  full stack only before a `package.json` exists ("build a booking app"); a
+  single non-sensitive layer without deploy returns `shape: "no-fanout"`,
+  `lane: "inline"`, as Workflow v3 says; and Supabase keys are listed only when
+  the stack or the goal involves Supabase, a database, auth or migrations.
+- `plan_feature` `includeDeploy` and `env_sync` `force` were dropped when the
+  MCP server ran tools through a pinned CLI (`GRAPHYLOOP_CLI`): the flag map was
+  an array, so `--deploy` and `--force` were never passed.
+- `task_record` counted any status other than `completed` as a failure, so an
+  agent writing `"done"` left the task pending forever and blocked the waves
+  after it. It now accepts only `completed` or `failed`, and stores the
+  `error` text of a failed task.
+- `memory_store` rejects unknown memory types (search already did), and the CLI
+  no longer stores `metadata: ""` when `--metadata` is omitted.
+- The MCP server and the OpenCode plugin recover when `state.json` is shut down
+  or cleaned from outside mid-session, instead of answering every later call
+  with `not initialized`. The plugin also honours `GRAPHYLOOP_HOME`.
+- **OpenCode tools failed at random with `spawn failed: … ETIMEDOUT`** on
+  Windows, 2 of 10 calls in a live squad run. OpenCode 1.18 ships Bun 1.3.14,
+  where `spawnSync`'s `timeout` fires early once the process has been idle
+  longer than the timeout (oven-sh/bun#33932), so any graphyloop call made more
+  than 30 s after the previous one died within milliseconds. The plugin now runs
+  the CLI with async `spawn` and its own timer. That also stops it from
+  blocking OpenCode while the CLI runs, and lets parallel tool calls run in
+  parallel; the engine's state lock already serializes their writes.
+- **Claude Code never loaded the workflow rules.** Install wrote
+  `~/.claude/AGENTS.md`, but Claude Code reads `AGENTS.md` only as project
+  instructions; user-scope instructions come from `~/.claude/CLAUDE.md` and
+  `~/.claude/rules/*.md`. The workflow now installs as
+  `~/.claude/rules/graphyloop-workflow.md`, which loads in every project and
+  leaves your own `CLAUDE.md` alone. An untouched old `~/.claude/AGENTS.md` is
+  removed on upgrade; one you edited is kept.
+- **Cursor never loaded `~/.cursor/rules/AGENTS.md`.** Cursor ignores plain
+  `.md` files in `rules/` and keeps User Rules in Customize → Rules, so
+  graphyloop no longer writes that file (an untouched old copy is removed). The
+  workflow loads from the `graphyloop-workflow` skill in `~/.agents/skills`, and
+  a project's own `AGENTS.md` is read from its root.
+- **DeepSeek Harness ignored the `graphyloop-squad` skill**: its description
+  held an unquoted `: `, which is invalid YAML, so dsh dropped the file. Strict
+  YAML parsers also rejected 3 bundled skills, 2 agents, and 7 generated Claude
+  Code agent and command files, `agent-chadi` among them. Every description
+  that needs it is now quoted, and a test keeps it that way.
+- **Gemini CLI printed 70 "Skill conflict detected" warnings on every start**
+  when Codex or Cursor was installed too, because the bundled skills sat in both
+  `~/.gemini/skills` and `~/.agents/skills`, and Gemini reads both. Skills now
+  live once in `~/.agents/skills` whatever order you install in.
+- Uninstall left graphyloop leftovers: OpenCode's `server-guard` plugin, an
+  empty `plugin` list, `default_agent: agent-chadi` pointing at a deleted agent,
+  and an orphaned comment in Codex's `config.toml`.
+
+### Docs
+- Gemini CLI: since June 18, 2026 Google no longer serves personal Google
+  sign-ins in Gemini CLI. It still works with a Gemini API key, Vertex AI, or a
+  Code Assist Standard/Enterprise license. Google's successor for individuals,
+  Antigravity CLI, is not a graphyloop harness yet.
+
 ## [0.6.1] — 2026-10-29 — Listing and release pipeline fixes
 
 ### Fixed
@@ -761,7 +827,8 @@ Documented and tested, but never published on its own: it ships inside 0.4.0.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
-[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/chadixearth/graphyloop/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/chadixearth/graphyloop/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/chadixearth/graphyloop/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/chadixearth/graphyloop/compare/78ff513...v0.5.0
