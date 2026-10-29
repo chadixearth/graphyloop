@@ -24,6 +24,9 @@ jobs:
           for f in $(find . -name '*.mjs' -not -path './node_modules/*'); do
             node --check "$f"
           done
+      - name: Check generated integrations match sources
+        shell: bash
+        run: node scripts/build-integrations.mjs --check
       - name: Run test suite
         shell: bash
         run: node scripts/run-tests.mjs

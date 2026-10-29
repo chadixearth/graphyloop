@@ -78,7 +78,7 @@ test('wave 0 freezes a context pack next to the contract, and every lane brief e
   const plan = cli(['plan', '--goal', INVENTORY])
   const contractDir = plan.contract.file.slice(0, plan.contract.file.lastIndexOf('/'))
   assert.equal(plan.ctx.file, `${contractDir}/ctx-${plan.slug}.md`, 'ctx pack lives in the same directory as the contract')
-  assert.equal(plan.inlineThreshold, 3)
+  assert.equal(plan.inlineThreshold, 8)
   assert.equal(plan.turnEconomyFooter, FOOTER)
 
   const w0 = plan.tasks.find((t) => t.id === 'w0-contract')
@@ -106,7 +106,7 @@ test('wave 0 freezes a context pack next to the contract, and every lane brief e
 test('no-fanout plans report the inline threshold', () => {
   const plan = cli(['plan', '--goal', 'rename a prop'])
   assert.equal(plan.shape, 'no-fanout')
-  assert.equal(plan.inlineThreshold, 3)
+  assert.equal(plan.inlineThreshold, 8)
 })
 
 test('distribute prompts carry their lane footer exactly once, as the last line', () => {

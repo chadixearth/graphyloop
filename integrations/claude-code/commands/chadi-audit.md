@@ -1,0 +1,5 @@
+---
+description: Run testing, security, performance, and final code review without broad implementation.
+---
+
+Use agent-chadi. Audit the project or current changes. Run testing review, security review, performance/reliability review when relevant, and final code review. Report findings with evidence and update the .opencode/chadi logs when they exist.

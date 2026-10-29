@@ -78,13 +78,15 @@ run elsewhere. In dsh, read the one that matches the request ("audit this repo" 
 
 ## Multi-layer work
 
-Size first: 3 or fewer known files is an inline edit, no delegation. For 4+ files
-do a batched read pass and write `ctx-<slug>.md` (per lane `path:line`, code
+Size first: up to 8 known files, in any mix of layers, is an inline edit, no
+delegation. Delegate only when the work splits into 2+ independent slices of
+about 5 minutes each, and keep the most coupled slice yourself. Before that, do
+a batched read pass and write `ctx-<slug>.md` (per lane `path:line`, code
 excerpt, pattern to copy) next to the contract. Do not fan out before the
 contract is frozen. `mcp__graphyloop__plan_feature`
-returns wave 0 (one agent freezes schema, API, props and test scenarios), then
-wave 1 builders in parallel, wave 2 integration, wave 3 verifiers in parallel,
-wave 4 gated deploy. Hand that `tasks` array straight to
+returns wave 0 (you, or one agent for unmapped code, freeze schema, API, props
+and test scenarios), then wave 1 builders in parallel, wave 2 integration, wave 3
+verifiers in parallel, wave 4 gated deploy. Hand that `tasks` array straight to
 `mcp__graphyloop__task_distribute`, which answers `dispatchNow` for what may run
 and `blocked` with `waitingOn` for what may not. Respect it — a lane dispatched
 early is the drift you will spend the integration wave undoing. The

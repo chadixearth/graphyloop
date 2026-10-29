@@ -262,6 +262,10 @@ test('install --harness all --force installs every harness and preserves user co
   assert.ok(cursorJson.mcpServers.graphyloop, 'graphyloop mcp entry added to cursor')
   assert.equal(Object.keys(cursorJson.mcpServers).filter((k) => k === 'graphyloop').length, 1)
   assert.ok(existsSync(join(sandbox, '.cursor', 'rules', 'AGENTS.md')), 'cursor AGENTS.md installed')
+  assert.ok(
+    existsSync(join(sandbox, '.agents', 'skills', 'graphyloop-workflow', 'SKILL.md')),
+    'codex/cursor shared ~/.agents/skills installed'
+  )
 
   // --- core install target (~/.graphyloop) ---
   assert.ok(existsSync(join(sandbox, '.graphyloop', 'graphyloop', 'cli.mjs')), 'adapter cli copied')
@@ -458,6 +462,10 @@ test('uninstall removes only graphyloop additions, keeps user config, exit 0', (
   assert.ok(cursorJson.mcpServers.github, 'user cursor server preserved')
   assert.ok(!cursorJson.mcpServers.graphyloop, 'graphyloop removed from cursor mcp.json')
 
+  assert.ok(
+    !existsSync(join(sandbox, '.agents', 'skills', 'graphyloop-workflow')),
+    '~/.agents/skills removed when codex and cursor are uninstalled'
+  )
   // core fully gone (backups *.bak-* may remain — that is by design)
   assert.ok(!existsSync(join(sandbox, '.graphyloop', 'graphyloop', 'cli.mjs')), 'core cli removed')
   assert.ok(!existsSync(join(sandbox, '.graphyloop', 'mcp-server.mjs')), 'mcp server removed')

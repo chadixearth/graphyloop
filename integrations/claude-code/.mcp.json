@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "graphyloop": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "graphyloop@0.6.0",
+        "mcp"
+      ]
+    }
+  }
+}

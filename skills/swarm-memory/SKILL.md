@@ -11,7 +11,7 @@ never corrected repeats its mistakes forever.
 
 ## When to activate
 
-- START of any non-trivial task (a build, 4+ files), before the context pack and contract. Inline edits of 3 or fewer files skip memory.
+- START of any non-trivial task, in the same parallel block as the first reads and before the context pack and contract. A trivial single-file edit skips memory.
 - END of any task that produced a decision, a gotcha, or a reusable approach.
 - When a past decision is being revisited ("why is it done this way?").
 

@@ -2,7 +2,7 @@
 
 > GraphyLoop is a one-command agentic workflow kit for AI coding agents: it wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with a 25-agent squad, parallel wave planning, persistent memory and an MCP server. Zero dependencies.
 
-Facts: version 0.5.0 · 7 harnesses · 25-agent squad (26 agent files including the driver) · 15 slash commands · 15 MCP tools · 70 bundled skills · zero runtime dependencies · Node.js >= 20 · MIT license · free, no API keys required, runs locally. Install: `npx graphyloop`.
+Facts: version 0.6.0 · 7 harnesses · Claude Code plugin · MCP Registry `io.github.chadixearth/graphyloop` · 25-agent squad (26 agent files incl. driver) · 15 slash commands · 15 MCP tools · 70 bundled skills (Agent Skills standard) · zero runtime dependencies · Node.js >= 20 · MIT.
 
 ## Start here
 
@@ -13,9 +13,9 @@ Facts: version 0.5.0 · 7 harnesses · 25-agent squad (26 agent files including 
 
 ## Docs
 
-- [Harness guide](https://raw.githubusercontent.com/chadixearth/graphyloop/main/docs/harnesses.md): per-harness detection, files written, next steps, verification (OpenCode, Claude Code, Codex, Cursor/Windsurf, DeepSeek Harness, Oh My Pi, Gemini CLI)
+- [Harness guide](https://raw.githubusercontent.com/chadixearth/graphyloop/main/docs/harnesses.md): per-harness detection, files written, Claude Code plugin, `~/.agents/skills` for Codex/Cursor, next steps, verification (OpenCode, Claude Code, Codex, Cursor/Windsurf, DeepSeek Harness, Oh My Pi, Gemini CLI)
 - [Reference](https://raw.githubusercontent.com/chadixearth/graphyloop/main/docs/reference.md): MCP server internals and benchmarks, configuration, skills, troubleshooting, development, version history
-- [Workflow v2 rules](https://raw.githubusercontent.com/chadixearth/graphyloop/main/workflow/AGENTS.md): the harness-neutral workflow — recall, size the work, context pack, frozen contract, one wave, verify, report
+- [Workflow v3 rules](https://raw.githubusercontent.com/chadixearth/graphyloop/main/workflow/AGENTS.md): the harness-neutral 12-rule workflow — recall first/record last, goal + proof, inline first (≤ 8 known files), fan out 2+ independent slices, context pack, frozen contract, turn economy, isolate what collides, no polling/schedule follow-ups, proof not claims, review by blast radius, evidence-first report
 - [Changelog](https://raw.githubusercontent.com/chadixearth/graphyloop/main/CHANGELOG.md): release notes
 - [Contributing](https://raw.githubusercontent.com/chadixearth/graphyloop/main/CONTRIBUTING.md): ground rules, layout, tests, releasing
 
@@ -24,7 +24,10 @@ Facts: version 0.5.0 · 7 harnesses · 25-agent squad (26 agent files including 
 - [GitHub repository](https://github.com/chadixearth/graphyloop): source and issues
 - [MCP server and engine](https://github.com/chadixearth/graphyloop/blob/main/lib/mcp.mjs): the 15 MCP tools (plan_feature, task_distribute, memory_search, memory_store, ...)
 - [Squad agents](https://github.com/chadixearth/graphyloop/tree/main/agents): the agent prompts
-- [Bundled skills](https://github.com/chadixearth/graphyloop/tree/main/skills): 70 skills
+- [Bundled skills](https://github.com/chadixearth/graphyloop/tree/main/skills): 70 skills (Agent Skills standard, installed to `~/.agents/skills` for Codex and Cursor)
+- [Claude Code plugin](https://github.com/chadixearth/graphyloop/tree/main/integrations/claude-code): `integrations/claude-code/` plugin (`/plugin marketplace add chadixearth/graphyloop` then `/plugin install graphyloop@graphyloop`)
+- [Claude Code marketplace manifest](https://raw.githubusercontent.com/chadixearth/graphyloop/main/.claude-plugin/marketplace.json): `.claude-plugin/marketplace.json`
+- [MCP Registry server manifest](https://raw.githubusercontent.com/chadixearth/graphyloop/main/server.json): `server.json` for `io.github.chadixearth/graphyloop` (`npx -y graphyloop mcp`)
 
 ## Optional
 

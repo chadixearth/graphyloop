@@ -48,7 +48,8 @@ real home directory mid-change is how you end up debugging your own editor.
 | `lib/mcp.mjs` | MCP stdio server. Calls the engine in-process; spawns the CLI only when `GRAPHYLOOP_CLI` pins a build. |
 | `lib/install-*.mjs` | One installer per harness (`opencode`, `claude`, `codex`, `cursor`, `dsh`, `omp`, `gemini`). Each exports `install(ctx)` and returns a report. |
 | `plugin/graphyloop/plugin.js` | OpenCode plugin (`graphyloop_*` tools). |
-| `agents/`, `workflow/`, `config/`, `templates/` | The squad, the workflow v2 rules, and per-harness files that get installed. |
+| `agents/`, `workflow/`, `config/`, `templates/` | The squad, the Workflow v3 rules, and per-harness files that get installed. |
+| `integrations/claude-code/`, `.claude-plugin/`, `server.json` | The Claude Code plugin, its marketplace entry and the MCP Registry manifest. Generated from the sources above by `npm run build:integrations`; CI fails on drift (`--check`). Never edit them by hand. |
 | `assets/` | Logo and diagrams. Generated SVG, committed; not published to npm. |
 
 The installed tree mirrors the repo's relative shape on purpose:
@@ -94,17 +95,23 @@ Maintainers only:
 
 ```bash
 npm test
-npm version minor          # or patch — commits and creates the v* tag
-git push --follow-tags
+npm version minor          # or patch — regenerates integrations/ + server.json, commits, creates the v* tag
+git push --follow-tags     # the tag is what triggers publish.yml; a tag left local never ships
 ```
 
 The publish workflow (`publish.yml`) re-runs the tests, rejects a tag that
-disagrees with `package.json`, and publishes through npm trusted publishing
-(OIDC, with provenance). One-time setup on npmjs.com: the package's
-*Settings* → *Trusted publishing* → *GitHub Actions*, repository
-`chadixearth/graphyloop`, workflow `publish.yml`. An `NPM_TOKEN` secret is an
-optional fallback. *Run workflow* (`workflow_dispatch`) takes an `otp` input
-and `dry_run=true` to validate the pipeline without shipping.
+disagrees with `package.json`, publishes to npm through trusted publishing
+(OIDC, with provenance), then publishes `server.json` to the MCP Registry with
+GitHub OIDC. One-time npm setup, from a logged-in shell (`npm login`):
+
+```bash
+npm trust github graphyloop --file publish.yml --repository chadixearth/graphyloop
+```
+
+Until that trust exists the publish step fails with `E404 PUT .../graphyloop`.
+An `NPM_TOKEN` secret is an optional fallback. *Run workflow*
+(`workflow_dispatch`) takes an `otp` input and `dry_run=true` to validate the
+pipeline without shipping.
 
 When writing release smoke tests: a bare unknown flag with no command
 (`graphyloop --doctor`) exits 1 and writes nothing, and `install` has no

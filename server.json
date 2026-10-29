@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.chadixearth/graphyloop",
+  "title": "GraphyLoop",
+  "description": "Workflow planner, wave dispatcher, persistent swarm memory, and deploy preflight for AI agents.",
+  "repository": {
+    "url": "https://github.com/chadixearth/graphyloop",
+    "source": "github"
+  },
+  "websiteUrl": "https://chadixearth.github.io/graphyloop/",
+  "version": "0.6.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "graphyloop",
+      "version": "0.6.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}

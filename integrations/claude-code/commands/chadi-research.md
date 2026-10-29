@@ -1,0 +1,5 @@
+---
+description: Use last30days for fresh public internet/community research before answering.
+---
+
+Use agent-chadi. Use the installed last30days skill as source-of-truth for fresh public internet research. Research the user's topic from the last 30 days, then answer with a grounded summary and cite/summarize the evidence. If last30days is missing or fails, report that and use the closest available fallback (official docs, web fetch).

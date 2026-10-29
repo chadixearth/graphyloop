@@ -1,0 +1,5 @@
+---
+description: DEFAULT mode. Main-agent-first workflow. Standard work auto-proceeds; Heavy work waits for approval unless pre-approved.
+---
+
+Use agent-chadi. chadi-fast mode (Workflow v3): state the goal and the check that proves it, then classify. Up to 8 known files in any mix of layers: edit inline, run the check, no dispatch. Fan out only when the work splits into 2+ independent slices of about 5 minutes each: write the context pack (ctx-<slug>.md) and the frozen contract (contract-<slug>.md), dispatch 1-3 lanes with disjoint files as parallel calls in ONE block (each brief ending with the turn-economy footer), and build the most coupled slice yourself while they run. Never poll long-running work. Review only by blast radius (migrations, auth, payments, secrets, public API). Report Changed / Files / Verified / Skills / Blocked with real command output, not claims. Heavy work waits for approval unless user already pre-approved.

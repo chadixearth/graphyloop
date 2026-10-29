@@ -1,0 +1,15 @@
+{
+  "name": "graphyloop",
+  "description": "GraphyLoop agentic workflow kit (Workflow v3, 25-agent squad, slash commands, core skills, and MCP server) for Claude Code.",
+  "owner": {
+    "name": "Richard Legaspi",
+    "url": "https://github.com/chadixearth"
+  },
+  "plugins": [
+    {
+      "name": "graphyloop",
+      "source": "./integrations/claude-code",
+      "description": "GraphyLoop Workflow v3 for Claude Code: the /graphyloop:chadi-* commands, the agent squad, core workflow skills and the graphyloop MCP server (wave planner, persistent memory, secrets, preflight)."
+    }
+  ]
+}

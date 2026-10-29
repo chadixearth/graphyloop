@@ -3,9 +3,8 @@ name: Publish
 # npm releases, in order of preference:
 #   1. Trusted publishing (OIDC): push a v* tag. No long-lived token — npm mints
 #      a short-lived credential for this workflow run and attaches a provenance
-#      attestation. One-time setup on npmjs.com: package graphyloop -> Settings ->
-#      Trusted publishing -> GitHub Actions, repo chadixearth/graphyloop,
-#      workflow file publish.yml.
+#      attestation. One-time setup:
+#      npm trust github graphyloop --file publish.yml --repository chadixearth/graphyloop
 #   2. NPM_TOKEN secret: used automatically when trusted publishing is not
 #      configured. An invalid token is reported, not fatal, so OIDC still runs.
 #   3. workflow_dispatch with the `otp` input: publish with a one-time code.
@@ -97,3 +96,35 @@ jobs:
       - name: Dry run (pack + verify, no publish)
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: npm publish --dry-run
+
+      - name: Already on MCP Registry?
+        id: mcp_exists
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').mcpName")
+          RESP=$(curl -fsSL "https://registry.modelcontextprotocol.io/v0.1/servers?search=$NAME" || echo '{}')
+          if node -e '
+            const [raw, name, ver] = process.argv.slice(1);
+            try {
+              const data = JSON.parse(raw);
+              const list = Array.isArray(data.servers) ? data.servers : [];
+              const hit = list.some((s) => {
+                const srv = s.server || s;
+                return srv && srv.name === name && srv.version === ver;
+              });
+              process.exit(hit ? 0 : 1);
+            } catch {
+              process.exit(1);
+            }
+          ' "$RESP" "$NAME" "$PKG"; then
+            echo "MCP_VERSION_EXISTS: $NAME@$PKG is already on the MCP Registry, skipping"
+            echo "yes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to MCP Registry (GitHub OIDC)
+        if: ${{ steps.mcp_exists.outputs.yes != 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

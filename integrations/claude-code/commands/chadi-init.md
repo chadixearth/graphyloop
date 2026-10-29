@@ -1,0 +1,5 @@
+---
+description: Initialize or refresh the current repo with agent-chadi workflow files.
+---
+
+Use agent-chadi. Initialize this project if missing: detect the stack, package manager, test/lint/build commands and key directories, then record them in the project's rules file (AGENTS.md or the harness equivalent) and create the workflow state directory (.opencode/chadi). If already initialized, refresh only what is missing. Do not create files for other harnesses.

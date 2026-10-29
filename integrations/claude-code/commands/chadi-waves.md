@@ -1,0 +1,5 @@
+---
+description: Plan a multi-layer feature as parallel waves (contract -> builders -> integration -> verify -> deploy) and dispatch wave 0.
+---
+
+Use agent-chadi. Call plan_feature with the user's request as the goal (tool names are bare; OpenCode prefixes graphyloop_, Claude Code mcp__graphyloop__). Report the wave table (which lanes run in parallel, what each owns, what gates the deploy). Wave 0 writes the context pack (ctx-<slug>.md) and the frozen contract (contract-<slug>.md) alone. Then pass plan.tasks to task_distribute and dispatch ONLY the tasks it returns in dispatchNow. After each result, task_record it and dispatch whatever that unblocked, all tasks of a wave in ONE parallel call. Every lane brief ends with the turn-economy footer. Do not let a builder start before the contract and ctx files exist. Never poll.

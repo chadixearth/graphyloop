@@ -1,35 +1,38 @@
 ---
 name: graphyloop-workflow
-description: Use this skill at the start of any non-trivial coding task, build or multi-file change to follow GraphyLoop Workflow v2 - recall, size the work, context pack, frozen contract, one parallel wave, no polling, verify by running, evidence report.
+description: Use this skill at the start of any non-trivial coding task, build or multi-file change to follow GraphyLoop Workflow v3 - recall, goal and proof up front, inline first (up to 8 files), fan out only for 2+ independent slices, context pack, frozen contract, no polling, proof not claims, review by blast radius, evidence report.
 ---
 
-# GraphyLoop Workflow v2 (condensed)
+# GraphyLoop Workflow v3 (condensed)
 
 The full rules live in the installed rules file (`AGENTS.md`) when your harness loads one. This is the same workflow in one page, for harnesses that do not: Oh My Pi, Gemini CLI, Claude Code and others. The user's explicit instruction and the project's own rules always win.
 
-Tool names: OpenCode `graphyloop_<tool>`; Claude Code and DeepSeek Harness `mcp__graphyloop__<tool>`; Codex, Cursor, Oh My Pi, Gemini CLI bare `<tool>`. Below: bare names. If one is missing, run `npx graphyloop doctor`.
+Tool names: OpenCode `graphyloop_<tool>`; Claude Code and DeepSeek Harness `mcp__graphyloop__<tool>` (the Claude Code plugin adds its own prefix, see `/mcp`); Codex, Cursor, Oh My Pi, Gemini CLI bare `<tool>`. Below: bare names. If one is missing, run `npx graphyloop doctor`.
 
-## The 11 rules
+## The 12 rules
 
-1. **Recall first, record last.** `memory_search` with 2-4 keywords before planning; use hits, stay silent on a miss, never invent one. At the end `memory_store` ONE dense line (`decision` / `lesson` / `pattern` / `event`). Never store credentials. See `swarm-memory`.
-2. **Size the work.** 3 or fewer known files: do it inline (read, smallest edit, one targeted check, no dispatch, no memory calls). 4+ files or unmapped code is a build: rules 3-9.
-3. **Context pack.** One batched read pass writes `ctx-<slug>.md`: per lane `path:line`, the current code excerpt, the pattern to copy. Lanes start editing instead of rediscovering.
-4. **Freeze the contract.** Same turn as dispatch, write `contract-<slug>.md` (entities and columns, routes with request/response JSON and error codes, props, the test scenarios that define done, env keys). It is the only cross-lane dependency; if wrong, fix the contract, never drift.
-5. **One wave.** All independent lanes in ONE parallel dispatch, one lane per layer (data, backend, frontend, tests, UI), strictly disjoint file sets, max 4 concurrent by default. Data runs alongside backend and frontend.
-6. **Turn economy.** Lanes batch reads, first edit by turn 5, done in about 25 turns; 40+ means mis-sized. End every BUILDER brief with:
+1. **Recall first, record last.** `memory_search` with 2-4 keywords before planning; use hits, stay silent on a miss, never invent one. At the end `memory_store` ONE dense line (`decision` / `lesson` / `pattern` / `event`) with the *why* and the commit or PR it landed in. Never store credentials. See `swarm-memory`.
+2. **Goal and proof up front.** State the end state, the check that proves it and the invariant it must not break. Iterate until the check passes; never weaken a test or assertion to get there.
+3. **Inline first.** Up to 8 known files, any mix of layers, when the code is known or one batched read pass maps it: read, edit, check. No dispatch. A lane costs the driver minutes of waiting, an inline edit seconds.
+4. **Fan out only for real parallelism.** 2+ independent slices of about 5+ minutes each: 1-3 lanes (max 4), disjoint files, ONE parallel call. The driver keeps the largest or most coupled slice and builds it while lanes run. Never fan out a tightly coupled change.
+5. **Context pack.** One batched read pass writes `ctx-<slug>.md`: per lane `path:line`, the current code excerpt, the pattern to copy. The driver writes it when one pass maps the code.
+6. **Freeze the contract.** Same turn as dispatch, write `contract-<slug>.md` (entities and columns, routes with request/response JSON and error codes, props, the test scenarios that define done, env keys). It is the only cross-lane dependency; if wrong, fix the contract, never drift.
+7. **Turn economy.** Lanes batch reads, first edit by turn 5, done in about 20 turns; 40+ means mis-sized. End every BUILDER brief with:
    `Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; first edit by turn 5; do not run project-wide lint/test/build — the driver does.`
    Wave-0 (writes ctx + contract): `Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file; write the ctx pack and contract before anything else.` Integration/verify/deploy lanes: `Read the ctx pack and contract first, in ONE turn. Batch 2+ reads/searches into one parallel call; read with line ranges; never re-read a file.`
-7. **No polling.** Servers, builds, deploys and renders run in the background or via the tool's own blocking command (`vercel inspect --wait`, `gh run watch`). Never sleep-loop.
-8. **Verify by running.** Smoke the changed path and quote the decisive output line. Tests alone are not proof; check UI in a real browser; check artifacts by viewing the rendered file. Run lint/typecheck/test/build once, centrally, after lanes land.
-9. **Audit is conditional.** Reviewer and security agents only for auth, RBAC, payments, uploads, secrets, data/tenant boundaries, or a diff you cannot read end to end.
-10. **Artifact wave** (posters, decks, PDFs, video): freeze `brief-<slug>.md`, hero piece first, one lane per artifact.
-11. **Evidence-first report:** **Changed** / **Files** / **Verified** (command plus verbatim output) / **Skills** / **Blocked**. Never claim a check that did not run.
+8. **Isolate what collides.** A lane that runs a server, database, browser or long suite gets its own worktree, port and database name. Serialize edits to one file.
+9. **No polling; schedule follow-ups.** Background jobs or the tool's own blocking command (`vercel inspect --wait`, `gh run watch`). Never sleep-loop. Later checks go to the harness scheduler (`/loop`, `/schedule`) or into the report as a next action.
+10. **Proof, not claims.** Failing-before/passing-after test; real-browser screenshot for UI; before/after numbers on the same machine for performance; the live URL for a deploy; the rendered file for an artifact. NOT evidence: "tests pass" alone, typecheck alone, "should work", a mocked run. Run lint/typecheck/test/build once, centrally, after lanes land.
+11. **Review by blast radius.** Reviewer and security agents only for migrations, auth/RBAC, payments, uploads, secrets, tenant boundaries, public API contracts and the project's named central files.
+12. **Evidence-first report:** **Changed** / **Files** / **Verified** (command plus verbatim output) / **Skills** / **Blocked**. Never claim a check that did not run.
 
-Five gates: Classify (2) → Discover (1, 3, 4) → Implement (5-7) → Verify (8, 9) → Report (1, 11).
+Five gates: Classify (2-4) → Discover (1, 5, 6) → Implement (4, 7-9) → Verify (10, 11) → Report (1, 12). Artifact sets (posters, decks, PDFs, video): freeze `brief-<slug>.md`, hero piece first, one lane per artifact.
+
+Keep the rules honest: short always-loaded rules, procedures in on-demand skills; keep a rule only if a with/without run shows it helps; let compaction work and persist what must survive it in files (ctx pack, contract, memory).
 
 ## Multi-layer features
 
-Call `plan_feature` with the request as `goal`. It returns waves, tasks, per-lane `owns` globs, `acceptance` checks and `dependsOn`; `shape: no-fanout` means inline. Wave 0 writes the ctx pack and contract alone; wave 1 builders in one call; wave 2 integration (the only wave that touches two lanes: real calls for mocks, local migrations dry-run first, `env_sync`, boot, happy path); wave 3 verify in one call; wave 4 deploy only when asked, with approval and a rollback plan. Dispatch only `dispatchNow` ids from `task_distribute`; `task_record` each result. See `graphyloop-waves`.
+Call `plan_feature` with the request as `goal`. It returns waves, tasks, per-lane `owns` globs, `acceptance` checks and `dependsOn`; `shape: no-fanout` means inline. Wave 0 writes the ctx pack and contract (the driver itself when one read pass maps the code); wave 1 builders in one call, the driver keeping the most coupled lane; wave 2 integration (the only wave that touches two lanes: real calls for mocks, local migrations dry-run first, `env_sync`, boot, happy path); wave 3 verify in one call; wave 4 deploy only when asked, with approval and a rollback plan. Dispatch only `dispatchNow` ids from `task_distribute`; `task_record` each result. See `graphyloop-waves`.
 
 Keep briefs to about 2 KB: role, goal, paths, symbols, pattern file, acceptance check. Never paste file bodies.
 
@@ -43,4 +46,4 @@ Keep briefs to about 2 KB: role, goal, paths, symbols, pattern file, acceptance 
 
 ## Proof per lane
 
-Frontend: build/typecheck plus a browser smoke of the touched flow. Backend: typecheck, tests on touched routes, input validation. Data: dry-run and rollback note before apply. Security-sensitive: review is mandatory; try to refute a high-severity finding before rework. Performance: measure before and after. One targeted repair on failure; a second failure stops and reports evidence.
+Frontend: build/typecheck plus a browser smoke of the touched flow with a screenshot. Backend: typecheck, tests on touched routes, input validation. Data: dry-run and rollback note before apply. Security-sensitive: review is mandatory; try to refute a high-severity finding before rework. Performance: measure before and after on the same machine. One targeted repair on failure; a second failure stops and reports evidence.

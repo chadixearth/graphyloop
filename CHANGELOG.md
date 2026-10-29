@@ -4,6 +4,73 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.6.0] — 2026-10-29 — Workflow v3 and new install channels
+
+0.5.0 was tagged but never reached npm: npm trusted publishing was not set up
+for the package, so the tag's publish run failed with `E404 PUT`. 0.6.0
+contains everything listed under 0.5.0 below.
+
+### Changed
+- **Workflow v3: 12 rules updated to October 2026 practice.** The rules now
+  start from measured costs (a dispatch costs the driver about 12 minutes of
+  waiting; an inline edit costs seconds) and from what current field reports
+  find works:
+  - **Goal and proof up front**: state the end state, the check that proves
+    it and the invariant it must not break; never meet a target by weakening
+    a test.
+  - **Inline first**: up to **8** known files in any mix of layers (was 3).
+    **Fan out only** when the work splits into 2+ independent slices of about
+    5 minutes each. Use 1-3 lanes, and the driver keeps the largest or most
+    coupled slice and builds it while the lanes run. The driver writes the
+    context pack itself when one read pass maps the code.
+  - **Isolate what collides**: a lane that runs servers, databases or
+    browsers gets its own worktree, port and database name.
+  - **No polling; schedule follow-ups**: later checks go to the harness
+    scheduler (`/loop`, `/schedule`) instead of sleep loops.
+  - **Proof, not claims**: failing-before/passing-after, a real-browser
+    screenshot, before/after numbers from the same machine, the live URL. The
+    rules also list what is NOT evidence ("tests pass" alone, a typecheck
+    alone, "should work", a mocked run).
+  - **Review by blast radius**: review and security lanes run for migrations,
+    auth, payments, secrets, tenant boundaries, public APIs and the project's
+    named central files; everything else is covered by proof.
+  - **Keep the rules honest**: short always-loaded rules with procedures in
+    on-demand skills, guidance checked with with/without runs, and anything
+    that must survive compaction written to files.
+  - Memory entries record the *why* and the commit or PR it landed in.
+- `plan_feature` reports `inlineThreshold: 8`, and its notes say the driver
+  writes wave 0 itself when it can map the code and keeps one wave-1 lane.
+  The builder, contract and verifier footers are unchanged.
+- `agent-chadi`, `graphyloop-workflow`, `/chadi-fast`, `/chadi-go`, the Codex
+  prompts, the dsh `graphyloop-squad` skill and `swarm-memory` follow Workflow
+  v3.
+
+### Added
+- **Claude Code plugin.** Run `/plugin marketplace add chadixearth/graphyloop`,
+  then `/plugin install graphyloop@graphyloop`. You get the 15
+  `/graphyloop:chadi-*` commands, 26 agents, the 3 core skills and the MCP
+  server (`npx -y graphyloop@0.6.0 mcp`). The plugin lives in
+  `integrations/claude-code/` and is generated from the canonical sources by
+  `npm run build:integrations` (CI runs `--check`). For Claude Code, use either
+  the plugin or `npx graphyloop --harness claude`, not both.
+- **MCP Registry.** The server is listed as `io.github.chadixearth/graphyloop`:
+  `mcpName` in `package.json` plus a root `server.json`. `publish.yml`
+  publishes it with GitHub OIDC after the npm release and skips a version that
+  is already listed.
+- **Agent Skills standard.** `--harness codex` and `--harness cursor` now
+  install the bundled skills into `~/.agents/skills`, the cross-tool user
+  skills directory that Codex and Cursor read (before this, neither harness
+  received any skills). The ownership rules match the other harnesses.
+  Uninstall removes untouched copies only after the last harness that uses the
+  directory is gone.
+- `npm version` regenerates the plugin and `server.json`, so their versions
+  never drift from `package.json`.
+
+### Fixed
+- Releases: the one-time trusted-publishing setup is now one command,
+  `npm trust github graphyloop --file publish.yml --repository chadixearth/graphyloop`
+  (see CONTRIBUTING). The `E404 PUT` failure mode is documented.
+
 ## [0.5.0] — 2026-10-09 — Workflow v2
 
 ### Changed
@@ -679,7 +746,8 @@ Documented and tested, but never published on its own: it ships inside 0.4.0.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
-[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/chadixearth/graphyloop/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/chadixearth/graphyloop/compare/78ff513...v0.5.0
 [0.4.2]: https://github.com/chadixearth/graphyloop/compare/v0.4.1...78ff513
 [0.4.1]: https://github.com/chadixearth/graphyloop/compare/v0.4.0...v0.4.1

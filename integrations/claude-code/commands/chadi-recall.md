@@ -1,0 +1,5 @@
+---
+description: Memory recall — search graphyloop memory for facts, lessons, decisions and past activity.
+---
+
+Use agent-chadi. Call memory_search with 2-4 keywords from the user's topic (tool names are bare; OpenCode prefixes graphyloop_, Claude Code mcp__graphyloop__), optionally filtered by type (decision, lesson, pattern, event). Synthesize the results and say which entries informed the answer. If nothing is found, say so; never fabricate a memory.

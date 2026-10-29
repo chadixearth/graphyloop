@@ -1,0 +1,5 @@
+---
+description: Skip discuss gate, straight to main-agent implementation.
+---
+
+Use agent-chadi. User pre-approved — skip the discuss gate. State the goal and the check that proves it. Up to 8 known files go inline; work that splits into 2+ independent slices of about 5 minutes each gets a context pack and frozen contract, then ONE parallel wave of 1-3 disjoint lanes (each brief ends with the turn-economy footer) while you build the most coupled slice yourself. Run tests and a diff review once after the lanes land, audit only by blast radius (migrations, auth, payments, secrets, public API), and report Changed / Files / Verified / Skills / Blocked with real output.

@@ -10,8 +10,8 @@ authors:
 repository-code: "https://github.com/chadixearth/graphyloop"
 url: "https://chadixearth.github.io/graphyloop/"
 license: MIT
-version: 0.5.0
-date-released: "2026-10-09"
+version: 0.6.0
+date-released: "2026-10-29"
 keywords:
   - ai-agents
   - agentic-workflow
