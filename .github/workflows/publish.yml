@@ -3,7 +3,9 @@ name: Publish
 # npm releases, in order of preference:
 #   1. Trusted publishing (OIDC): push a v* tag. No long-lived token — npm mints
 #      a short-lived credential for this workflow run and attaches a provenance
-#      attestation. One-time setup:
+#      attestation. One-time setup: npmjs.com -> graphyloop -> Settings ->
+#      Trusted Publisher -> GitHub Actions (chadixearth / graphyloop /
+#      publish.yml, environment blank), or from a logged-in shell:
 #      npm trust github graphyloop --file publish.yml --repository chadixearth/graphyloop
 #   2. NPM_TOKEN secret: used automatically when trusted publishing is not
 #      configured. An invalid token is reported, not fatal, so OIDC still runs.
@@ -80,6 +82,26 @@ jobs:
           else echo "::warning::NPM_TOKEN is not usable ($WHO). Trusted publishing will be tried; if it is not configured, mint a granular token with read+write on graphyloop and update the secret."; fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # npm tries the OIDC exchange first and, when it is rejected, silently
+      # falls back to NODE_AUTH_TOKEN; with a stale token that surfaces only as
+      # `E404 PUT`. Run the exchange here so the log says exactly why npm
+      # rejected this workflow (the token itself is never printed).
+      - name: Trusted publishing preflight (diagnostic)
+        if: ${{ steps.exists.outputs.yes != 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          node --input-type=module -e '
+            const pkg = JSON.parse((await import("node:fs")).readFileSync("package.json", "utf8")).name;
+            const u = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+            u.searchParams.set("audience", "npm:registry.npmjs.org");
+            const res = await fetch(u, { headers: { Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` } });
+            const id = (await res.json()).value;
+            const c = JSON.parse(Buffer.from(id.split(".")[1], "base64url").toString("utf8"));
+            console.log("OIDC claims:", JSON.stringify({ repository: c.repository, repository_owner: c.repository_owner, workflow_ref: c.workflow_ref, ref: c.ref, environment: c.environment ?? null }));
+            const r = await fetch(`https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/${encodeURIComponent(pkg)}`, { method: "POST", headers: { Authorization: `Bearer ${id}` } });
+            if (r.ok) console.log(`TRUSTED_PUBLISHING_OK: npm accepts this workflow for ${pkg}`);
+            else console.log(`::warning::TRUSTED_PUBLISHING_REJECTED (HTTP ${r.status}): ${(await r.text()).slice(0, 400)}`);
+          '
 
       - name: Publish to npm (trusted publishing or token)
         if: ${{ steps.exists.outputs.yes != 'true' && github.event.inputs.dry_run != 'true' && (github.event.inputs.otp == '' || github.event.inputs.otp == null) }}
