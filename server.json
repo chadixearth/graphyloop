@@ -8,13 +8,13 @@
     "source": "github"
   },
   "websiteUrl": "https://chadixearth.github.io/graphyloop/",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "graphyloop",
-      "version": "0.6.2",
+      "version": "0.6.3",
       "transport": {
         "type": "stdio"
       },
