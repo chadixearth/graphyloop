@@ -142,6 +142,12 @@ export function computeExpectedFiles(repoRoot = REPO_ROOT) {
         name: 'graphyloop',
         source: './integrations/claude-code',
         description: pluginDescription,
+        // Discovery fields: marketplace browsers and plugin directories that
+        // crawl .claude-plugin/marketplace.json filter on category and tags.
+        category: 'development',
+        tags: ['workflow', 'agents', 'subagents', 'mcp', 'memory', 'agent-skills', 'planning'],
+        homepage: pkg.homepage,
+        license: pkg.license || 'MIT',
       },
     ],
   };

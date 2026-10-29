@@ -9,7 +9,19 @@
     {
       "name": "graphyloop",
       "source": "./integrations/claude-code",
-      "description": "GraphyLoop Workflow v3 for Claude Code: the /graphyloop:chadi-* commands, the agent squad, core workflow skills and the graphyloop MCP server (wave planner, persistent memory, secrets, preflight)."
+      "description": "GraphyLoop Workflow v3 for Claude Code: the /graphyloop:chadi-* commands, the agent squad, core workflow skills and the graphyloop MCP server (wave planner, persistent memory, secrets, preflight).",
+      "category": "development",
+      "tags": [
+        "workflow",
+        "agents",
+        "subagents",
+        "mcp",
+        "memory",
+        "agent-skills",
+        "planning"
+      ],
+      "homepage": "https://chadixearth.github.io/graphyloop/",
+      "license": "MIT"
     }
   ]
 }

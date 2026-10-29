@@ -7,6 +7,9 @@
 
 [![GraphyLoop](https://img.shields.io/badge/_GraphyLoop-any%20harness-6366f1?style=for-the-badge)](https://github.com/chadixearth/graphyloop)
 [![npm version](https://img.shields.io/npm/v/graphyloop?label=npx%20graphyloop&style=for-the-badge&logo=npm&color=cb3837)](https://www.npmjs.com/package/graphyloop)
+[![npm downloads](https://img.shields.io/npm/dm/graphyloop?style=for-the-badge&logo=npm&label=downloads&color=cb3837)](https://www.npmjs.com/package/graphyloop)
+[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757?style=for-the-badge)](integrations/claude-code/)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.chadixearth%2Fgraphyloop-0ea5e9?style=for-the-badge)](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.chadixearth/graphyloop)
 [![CI — Win/macOS/Linux × Node 20/22/24](https://github.com/chadixearth/graphyloop/actions/workflows/ci.yml/badge.svg)](https://github.com/chadixearth/graphyloop/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
