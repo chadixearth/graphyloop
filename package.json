@@ -1,6 +1,6 @@
 {
   "name": "graphyloop",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "mcpName": "io.github.chadixearth/graphyloop",
   "description": "Agentic workflow kit for AI coding agents: one command wires Claude Code, Codex, Cursor, Gemini CLI, OpenCode, Oh My Pi and DeepSeek with Workflow v3, a 25-agent squad, memory, Agent Skills and MCP. Claude Code plugin + MCP Registry. Zero deps.",
   "type": "module",
