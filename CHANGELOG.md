@@ -4,6 +4,21 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.6.1] — 2026-10-29 — Listing and release pipeline fixes
+
+### Fixed
+- The npm description now fits npm's 255-character limit. The 0.6.0 text was
+  381 characters, so npm search cut it off mid-word and dropped "Claude Code
+  plugin", "MCP Registry" and "zero dependencies".
+- `publish.yml`: a *Trusted publishing preflight* step runs the OIDC exchange
+  and prints why npm rejects it. Before this, npm fell back to `NPM_TOKEN` and
+  reported only `E404 PUT`. The MCP Registry step now waits until npm serves
+  the new version: npm processes a fresh release for a few minutes, and
+  registering before that fails with "version not found".
+- CONTRIBUTING: the npm trusted-publisher setup needs your 2FA security key,
+  and **Allow npm publish** must be ticked (only `npm stage publish` is
+  allowed by default).
+
 ## [0.6.0] — 2026-10-29 — Workflow v3 and new install channels
 
 0.5.0 was tagged but never reached npm: npm trusted publishing was not set up
@@ -746,7 +761,8 @@ Documented and tested, but never published on its own: it ships inside 0.4.0.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
-[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/chadixearth/graphyloop/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/chadixearth/graphyloop/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/chadixearth/graphyloop/compare/78ff513...v0.5.0
 [0.4.2]: https://github.com/chadixearth/graphyloop/compare/v0.4.1...78ff513

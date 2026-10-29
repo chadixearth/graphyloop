@@ -2,7 +2,7 @@
   "name": "graphyloop",
   "version": "0.6.0",
   "mcpName": "io.github.chadixearth/graphyloop",
-  "description": "GraphyLoop is a one-command agentic workflow kit for AI coding agents: it wires Claude Code, OpenCode, Codex, Cursor, Gemini CLI, Oh My Pi and DeepSeek Harness with Workflow v3 (inline-first, one parallel wave, proof before done), a 25-agent squad, persistent memory, Agent Skills and an MCP server. Also ships as a Claude Code plugin and an MCP Registry server. Zero dependencies.",
+  "description": "Agentic workflow kit for AI coding agents: one command wires Claude Code, Codex, Cursor, Gemini CLI, OpenCode, Oh My Pi and DeepSeek with Workflow v3, a 25-agent squad, memory, Agent Skills and MCP. Claude Code plugin + MCP Registry. Zero deps.",
   "type": "module",
   "author": "Richard Legaspi (https://github.com/chadixearth)",
   "homepage": "https://chadixearth.github.io/graphyloop/",
