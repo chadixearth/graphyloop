@@ -251,6 +251,62 @@ export function computeExpectedFiles(repoRoot = REPO_ROOT) {
     }
   }
 
+  // 9. Hand-written version-bearing files (skipped if absent in partial test clones).
+  const semverRe = '\\d+\\.\\d+\\.\\d+(?:-[\\w.]+)?';
+  const versionStampedFiles = [
+    {
+      relPath: 'CITATION.cff',
+      patterns: [new RegExp(`(^version:\\s*)${semverRe}(?=\\r?$)`, 'gm')],
+    },
+    {
+      relPath: 'llms.txt',
+      patterns: [new RegExp(`(Facts: version )${semverRe}( ·)`, 'g')],
+    },
+    {
+      relPath: 'docs/llms.txt',
+      patterns: [new RegExp(`(Facts: version )${semverRe}( ·)`, 'g')],
+    },
+    {
+      relPath: '.github/ISSUE_TEMPLATE/bug_report.yml',
+      patterns: [
+        new RegExp(
+          `(id:\\s*version\\r?\\n(?:\\s+[^\\r\\n]+\\r?\\n){1,5}?\\s+placeholder:\\s*")${semverRe}(")`,
+          'g'
+        ),
+      ],
+    },
+    {
+      relPath: 'docs/index.html',
+      patterns: [
+        new RegExp(`("softwareVersion":\\s*")${semverRe}(")`, 'g'),
+        new RegExp(`(GraphyLoop )${semverRe}( ·)`, 'g'),
+      ],
+    },
+  ];
+
+  for (const { relPath, patterns } of versionStampedFiles) {
+    const absPath = path.join(repoRoot, relPath);
+    if (!existsSync(absPath)) continue;
+    let updated = readFileSync(absPath, 'utf8');
+    let missingAnchor = false;
+    for (const re of patterns) {
+      let count = 0;
+      updated = updated.replace(re, (...args) => {
+        count += 1;
+        const prefix = args[1] ?? '';
+        const suffix = typeof args[2] === 'string' ? args[2] : '';
+        return `${prefix}${version}${suffix}`;
+      });
+      if (count !== 1) {
+        missingAnchor = true;
+      }
+    }
+    expected.set(
+      relPath,
+      missingAnchor ? `__MISSING_VERSION_ANCHOR__:${relPath}\n` : updated
+    );
+  }
+
   return expected;
 }
 
@@ -281,11 +337,15 @@ export function buildIntegrations({ repoRoot = REPO_ROOT, check = false } = {}) 
     const absPath = path.join(repoRoot, relPath);
     let current = null;
     if (existsSync(absPath)) {
-      current = readFileSync(absPath, 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const raw = readFileSync(absPath, 'utf8');
+      current = want.includes('\r\n') ? raw : raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     }
     if (current !== want) {
       stale.push(relPath);
       if (!check) {
+        if (want.startsWith('__MISSING_VERSION_ANCHOR__:')) {
+          throw new Error(`Version anchor not found in ${relPath}`);
+        }
         mkdirSync(path.dirname(absPath), { recursive: true });
         writeFileSync(absPath, want, 'utf8');
         written.push(relPath);

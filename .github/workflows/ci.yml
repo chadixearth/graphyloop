@@ -14,8 +14,8 @@ jobs:
         node: [20, 22, 24]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
       - name: Syntax check all modules
@@ -39,7 +39,7 @@ jobs:
           test -f "$SANDBOX/.graphyloop/graphyloop/cli.mjs"
           test -f "$SANDBOX/.graphyloop/mcp-server.mjs"
           # engine.mjs imports these statically: a tree missing one cannot load.
-          for f in mcp engine secrets stack planner; do
+          for f in mcp engine secrets stack planner safe-fs; do
             test -f "$SANDBOX/.graphyloop/lib/$f.mjs"
           done
           test -d "$SANDBOX/.claude/agents"
@@ -107,6 +107,7 @@ jobs:
           grep -q 'package/lib/secrets.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/lib/stack.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/lib/planner.mjs' /tmp/graphyloop-files.txt
+          grep -q 'package/lib/safe-fs.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/lib/install-skills.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/lib/install-dsh.mjs' /tmp/graphyloop-files.txt
           grep -q 'package/templates/dsh/skills/graphyloop-squad/SKILL.md' /tmp/graphyloop-files.txt

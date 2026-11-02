@@ -4,6 +4,38 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [0.6.5] — 2026-11-02 — No lost writes on Windows
+
+### Fixed
+- **Parallel writes on Windows could drop an update.** The state lock is a
+  directory; on Windows, creating it right after its holder removed it answers
+  `EPERM` until the last handle on it closes, and the engine treated that as a
+  fatal error. The writer printed `{"error":"EPERM: … state.json.lock"}` and its
+  memory, task or record was lost (2 runs in 40 at 32 parallel writers; it also
+  failed CI on v0.6.4). OpenCode, which now runs tool calls in parallel, hit
+  this path. The engine now waits it out like any other contention, checks for
+  a stale lock 8x less often (the check itself kept the directory open), and
+  retries a refused unlock instead of leaving a lock that blocked writers for
+  30 s. 0 lost writes in 60 runs of 32 parallel writers.
+- **A state file that could not be read was replaced by an empty one.** Any
+  read error, such as a file held open by antivirus or OneDrive, counted as
+  corruption: the real `state.json` was moved to `state.json.corrupt-*` and the
+  next `init`, or the MCP server's auto-init, started a fresh state with no
+  memories. A failed `stat` read as "no state yet" and did the same. Only an
+  unparsable file is quarantined now; a read error is reported and nothing is
+  moved or written. The secrets store had the same flaw and gets the same fix.
+- Saves to `state.json` and `secrets.json` retry the rename Windows refuses
+  while another program has the file open, for up to 2 s, and never leave a
+  `.tmp-*` file behind when a write fails.
+
+### Changed
+- CI runs `actions/checkout` and `actions/setup-node` v5 (Node 24 runtime), so
+  the Node 20 deprecation warning is gone from every job.
+- `npm version` now stamps the version into `CITATION.cff`, both `llms.txt`
+  files, the bug report template and the landing page (`softwareVersion` and
+  footer), and CI's `build-integrations --check` fails when one of them drifts.
+  These were bumped by hand on every release.
+
 ## [0.6.4] — 2026-10-29 — Partial uninstall keeps the shared core
 
 ### Fixed
@@ -848,7 +880,8 @@ Documented and tested, but never published on its own: it ships inside 0.4.0.
   Cursor · 24-agent squad · 5-gate workflow · MCP server · persistent memory and
   swarm engine · zero runtime dependencies.
 
-[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/chadixearth/graphyloop/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/chadixearth/graphyloop/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/chadixearth/graphyloop/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/chadixearth/graphyloop/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/chadixearth/graphyloop/compare/v0.6.1...v0.6.2

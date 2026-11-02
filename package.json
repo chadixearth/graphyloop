@@ -61,7 +61,7 @@
     "setup": "node setup.mjs",
     "test": "node scripts/run-tests.mjs",
     "build:integrations": "node scripts/build-integrations.mjs",
-    "version": "node scripts/build-integrations.mjs && git add server.json .claude-plugin integrations",
+    "version": "node scripts/build-integrations.mjs && git add server.json .claude-plugin integrations CITATION.cff llms.txt docs/llms.txt .github/ISSUE_TEMPLATE/bug_report.yml docs/index.html",
     "test:fast": "node scripts/run-tests.mjs --fast",
     "test:list": "node scripts/run-tests.mjs --list",
     "test:engine": "node scripts/run-tests.mjs adapter",

@@ -191,3 +191,85 @@ test('--check detects a deliberately stale file and an orphaned file in a temp c
     rmSync(tempRoot, { recursive: true, force: true });
   }
 });
+
+test('version-stamped docs fail --check when stale or missing anchor and heal on build in a temp clone', () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), 'graphyloop-version-sync-'));
+  try {
+    const copyPaths = [
+      'package.json',
+      'config/opencode.commands.json',
+      'agents',
+      'skills/graphyloop-workflow',
+      'skills/graphyloop-waves',
+      'skills/swarm-memory',
+      'server.json',
+      '.claude-plugin',
+      'integrations',
+      'CITATION.cff',
+      'llms.txt',
+      'docs/llms.txt',
+      '.github/ISSUE_TEMPLATE/bug_report.yml',
+      'docs/index.html',
+    ];
+    for (const rel of copyPaths) {
+      cpSync(path.join(REPO_ROOT, rel), path.join(tempRoot, rel), { recursive: true });
+    }
+
+    const pkg = readJson('package.json');
+    const cleanCheck = buildIntegrations({ repoRoot: tempRoot, check: true });
+    assert.equal(cleanCheck.ok, true);
+
+    // Set an old version in CITATION.cff and docs/index.html -> --check exits 1 naming them.
+    const citationPath = path.join(tempRoot, 'CITATION.cff');
+    writeFileSync(
+      citationPath,
+      readFileSync(citationPath, 'utf8').replace(`version: ${pkg.version}`, 'version: 0.0.1'),
+      'utf8'
+    );
+    const indexHtmlPath = path.join(tempRoot, 'docs', 'index.html');
+    writeFileSync(
+      indexHtmlPath,
+      readFileSync(indexHtmlPath, 'utf8').replace(`GraphyLoop ${pkg.version} ·`, 'GraphyLoop 0.0.1 ·'),
+      'utf8'
+    );
+
+    const staleRes = spawnSync(
+      process.execPath,
+      [BUILD_SCRIPT, '--check', '--root', tempRoot],
+      { encoding: 'utf8' }
+    );
+    assert.equal(staleRes.status, 1, 'expected --check to exit 1 when doc version is stale');
+    assert.match(staleRes.stderr, /CITATION\.cff/);
+    assert.match(staleRes.stderr, /docs\/index\.html/);
+
+    // Run without --check -> files now carry package.json's version and --check exits 0.
+    const buildRes = spawnSync(
+      process.execPath,
+      [BUILD_SCRIPT, '--root', tempRoot],
+      { encoding: 'utf8' }
+    );
+    assert.equal(buildRes.status, 0, `expected build to exit 0: ${buildRes.stderr}`);
+    assert.match(readFileSync(citationPath, 'utf8'), new RegExp(`^version: ${pkg.version}$`, 'm'));
+    assert.ok(readFileSync(indexHtmlPath, 'utf8').includes(`GraphyLoop ${pkg.version} ·`));
+
+    const healedRes = spawnSync(
+      process.execPath,
+      [BUILD_SCRIPT, '--check', '--root', tempRoot],
+      { encoding: 'utf8' }
+    );
+    assert.equal(healedRes.status, 0, `expected healed --check to exit 0: ${healedRes.stderr}`);
+
+    // Removing a version anchor entirely must also fail --check.
+    const llmsPath = path.join(tempRoot, 'llms.txt');
+    writeFileSync(
+      llmsPath,
+      readFileSync(llmsPath, 'utf8').replace(`Facts: version ${pkg.version} ·`, 'Facts: release ·'),
+      'utf8'
+    );
+    const missingAnchorCheck = buildIntegrations({ repoRoot: tempRoot, check: true });
+    assert.equal(missingAnchorCheck.ok, false);
+    assert.ok(missingAnchorCheck.stale.includes('llms.txt'));
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
