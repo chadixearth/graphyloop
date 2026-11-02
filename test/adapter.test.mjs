@@ -146,21 +146,38 @@ test('concurrent writers do not lose updates', async () => {
     tasksCompleted: 0, tasksFailed: 0, taskQueue: [],
   }))
 
-  await Promise.all(
+  // Each writer's own answer is kept: the CLI reports a failure as {error} on
+  // stdout with exit 0, so a count alone hides why a write went missing.
+  const answers = await Promise.all(
     Array.from({ length: WRITERS }, (_, i) => new Promise((done, fail) => {
       const child = spawn(process.execPath, [CLI, 'memory-store', '--content', `parallel-${i}`], {
         env: { ...process.env, GRAPHYLOOP_PROJECT_ROOT: project },
-        stdio: 'ignore',
+        stdio: ['ignore', 'pipe', 'ignore'],
       })
+      let out = ''
+      child.stdout.on('data', (d) => { out += d })
       child.on('error', fail)
-      child.on('exit', (code) => (code === 0 ? done() : fail(new Error(`writer ${i} exited ${code}`))))
+      child.on('close', (code) => (code === 0 ? done(out.trim()) : fail(new Error(`writer ${i} exited ${code}`))))
     }))
   )
 
+  const failed = answers.filter((a) => !a.includes('"ok":true'))
+  assert.deepEqual(failed, [], 'every writer reports success')
   const state = JSON.parse(readFileSync(stateFile(), 'utf8'))
   const stored = state.memories.filter((m) => m.content.startsWith('parallel-')).map((m) => m.content).sort()
   assert.equal(stored.length, WRITERS, `every write persisted, got: ${stored}`)
   assert.ok(!existsSync(`${stateFile()}.lock`), 'lock released')
+})
+
+test('a state file that cannot be read is reported, never quarantined and started over', () => {
+  // A directory where the file belongs fails to read (EISDIR) on every
+  // platform, standing in for a file another program holds open. Treating that
+  // as corruption moved the real file aside and init wrote an empty state.
+  mkdirSync(stateFile(), { recursive: true })
+  const res = cli(['init'])
+  assert.ok(res.error, `init reports the read failure: ${JSON.stringify(res)}`)
+  const left = readdirSync(dirname(stateFile()))
+  assert.deepEqual(left, ['state.json'], 'nothing quarantined, nothing written in its place')
 })
 
 test('a stale lock does not wedge the engine forever', () => {

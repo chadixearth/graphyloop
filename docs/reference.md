@@ -99,7 +99,8 @@ Call `skills_status` to see exactly which skills are present on a machine and wh
 | I edited an agent and uninstall kept it | Intended — uninstall only removes byte-identical copies |
 | `timed out ... waiting for the graphyloop state lock` | Another graphyloop command is mid-write. A lock orphaned by a killed process clears itself after 30s; raise `GRAPHYLOOP_LOCK_TIMEOUT_MS` if your swarm is very wide |
 | My swarm history "disappeared" after updating | It moved: `.opencode/graphyloop/state.json` → `.graphyloop/state.json`, migrated on first use. `npx graphyloop status` prints the active `stateFile` path |
-| `state.json.corrupt-<timestamp>` appeared | The engine found an unparsable state file, kept it for inspection, and started clean rather than failing every command |
+| `state.json.corrupt-<timestamp>` appeared | The engine found an unparsable state file, kept it for inspection, and started clean rather than failing every command. A file it merely cannot *read* is never treated this way |
+| `EPERM` / `EBUSY` error naming `state.json` or `secrets.json` (Windows) | Another program (antivirus, OneDrive, the search indexer) held the file for over 2 s; the engine retries that long first. Nothing was written, moved or lost: run the command again, or exclude `.graphyloop/` from the scanner or sync |
 
 ---
 
