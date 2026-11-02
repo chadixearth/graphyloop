@@ -95,14 +95,18 @@ Maintainers only:
 
 ```bash
 npm test
-npm version minor          # or patch — regenerates integrations/ + server.json, commits, creates the v* tag
+npm version minor          # or patch — stamps the version everywhere (integrations/, server.json, CITATION.cff, llms.txt, landing page), commits, creates the v* tag
 git push --follow-tags     # the tag is what triggers publish.yml; a tag left local never ships
 ```
 
+Write the `## [X.Y.Z] — date — title` section of `CHANGELOG.md` before
+`npm version`: the GitHub Release takes its title and notes from it.
+
 The publish workflow (`publish.yml`) re-runs the tests, rejects a tag that
 disagrees with `package.json`, publishes to npm through trusted publishing
-(OIDC, with provenance), then publishes `server.json` to the MCP Registry with
-GitHub OIDC. One-time npm setup: on npmjs.com open
+(OIDC, with provenance), publishes `server.json` to the MCP Registry with
+GitHub OIDC, then creates the GitHub Release in a separate job (the only one
+with `contents: write`). One-time npm setup: on npmjs.com open
 <https://www.npmjs.com/package/graphyloop/access> (it asks for your 2FA
 security key first) → *Trusted Publisher* → *GitHub Actions*, then
 `chadixearth` / `graphyloop` / `publish.yml`, environment empty, and tick

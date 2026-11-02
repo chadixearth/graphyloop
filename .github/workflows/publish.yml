@@ -166,3 +166,47 @@ jobs:
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
           ./mcp-publisher login github-oidc
           ./mcp-publisher publish
+
+  # The GitHub Release is the one step that writes to the repo, so it runs as its
+  # own job with contents: write; the publish job above keeps contents: read next
+  # to its OIDC token. It runs only after npm and the MCP Registry succeeded.
+  github-release:
+    needs: publish
+    if: ${{ github.event.inputs.dry_run != 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      # Title and notes come from the `## [X.Y.Z] — date — title` section of
+      # CHANGELOG.md; a release without one fails here rather than shipping empty.
+      - name: Release notes from CHANGELOG
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          node -e '
+            const fs = require("fs");
+            const v = process.argv[1];
+            const lines = fs.readFileSync("CHANGELOG.md", "utf8").split(/\r?\n/);
+            const start = lines.findIndex((l) => l.startsWith("## [" + v + "]"));
+            if (start < 0) { console.log("::error::CHANGELOG.md has no ## [" + v + "] section"); process.exit(1); }
+            let end = lines.findIndex((l, i) => i > start && /^## \[/.test(l));
+            if (end < 0) end = lines.length;
+            const title = lines[start].split(" — ").slice(2).join(" — ").trim();
+            const notes = lines.slice(start + 1, end).join("\n").trim();
+            fs.writeFileSync("release-title.txt", title ? "v" + v + " — " + title : "v" + v);
+            fs.writeFileSync("release-notes.md", notes + "\n\n**Install / update:** `npx graphyloop@latest update`\n");
+          ' "$VER"
+          echo "release title: $(cat release-title.txt)"
+
+      - name: Create the GitHub Release (skipped when it exists)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          if gh release view "v$VER" >/dev/null 2>&1; then
+            echo "RELEASE_EXISTS: v$VER already has a GitHub Release, skipping"
+            exit 0
+          fi
+          gh release create "v$VER" --verify-tag --title "$(cat release-title.txt)" --notes-file release-notes.md

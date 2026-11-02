@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/); while the package is `0.x` a minor
 bump may still change behaviour.
 
+## [Unreleased]
+
+### Changed
+- `publish.yml` creates the GitHub Release after npm and the MCP Registry
+  succeed, titled and filled from the version's CHANGELOG section. It runs as a
+  separate job, the only one with `contents: write`, and skips a release that
+  already exists. This was the last manual release step.
+- Docs: the 0.6.5 entry in *What's New*, the automated release steps, and the
+  update command (`npx graphyloop@latest update`; `install --force` wires every
+  tool on the machine).
+
 ## [0.6.5] — 2026-11-02 — No lost writes on Windows
 
 ### Fixed
